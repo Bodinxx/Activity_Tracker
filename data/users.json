@@ -1,1 +1,21 @@
-{}
+{
+    "admin": {
+        "password_hash": "$2y$10$jHM6Q8kpHW06zEbhWasXv.G\/LGPHuPBX0s6DsusbP4QGDeHBE0cZK",
+        "last_login": null,
+        "theme": "dark",
+        "role": "admin",
+        "goals": {
+            "avg_steps": 6000,
+            "workout_hours": 5,
+            "sleep_goal": 7,
+            "clean_meals_goal": 14
+        },
+        "profile": {
+            "full_name": "Administrator",
+            "weight": 80,
+            "height": 175,
+            "age": 30,
+            "gender": "m"
+        }
+    }
+}

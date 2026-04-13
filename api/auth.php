@@ -40,9 +40,22 @@ $usersFile = DATA_DIR . 'users.json';
 
 switch ($action) {
 
+    /* ---- CHECK USERNAME ---- */
+    case 'check_username': {
+        $username = strtolower(trim($input['username'] ?? ''));
+        if ($username === '') {
+            echo json_encode(['available' => false, 'error' => 'Username is required']);
+            exit;
+        }
+        $users = readJsonFile($usersFile);
+        $taken = isset($users[$username]);
+        echo json_encode(['available' => !$taken]);
+        break;
+    }
+
     /* ---- LOGIN ---- */
     case 'login': {
-        $username = trim($input['username'] ?? '');
+        $username = strtolower(trim($input['username'] ?? ''));
         $password = $input['password'] ?? '';
 
         if ($username === '' || $password === '') {
@@ -85,7 +98,7 @@ switch ($action) {
 
     /* ---- SIGNUP ---- */
     case 'signup': {
-        $username  = trim($input['username'] ?? '');
+        $username  = strtolower(trim($input['username'] ?? ''));
         $password  = $input['password'] ?? '';
         $captchaAns = isset($input['captcha_answer']) ? intval($input['captcha_answer']) : null;
 
