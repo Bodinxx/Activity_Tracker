@@ -3,7 +3,7 @@
    CSS Custom Properties + 10 Themes
    ===================================================== */
 
-/* ── Default / Dark Theme (Harris-Benedict BMR coefficients documented in dashboard.js) ── */
+/* ── Default / Dark Theme ── */
 :root,
 body[data-theme="dark"] {
   --bg:           #1a1a2e;
