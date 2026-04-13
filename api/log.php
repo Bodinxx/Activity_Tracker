@@ -96,9 +96,10 @@ if ($method === 'POST') {
 
         case 'save_day': {
             $date = trim($input['date'] ?? '');
-            if (!$date || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            $parsedDate = DateTime::createFromFormat('Y-m-d', $date);
+            if (!$date || !$parsedDate || $parsedDate->format('Y-m-d') !== $date) {
                 http_response_code(400);
-                echo json_encode(['error' => 'Invalid date']);
+                echo json_encode(['error' => 'Invalid date format. Use YYYY-MM-DD.']);
                 exit;
             }
 

@@ -11,7 +11,7 @@
     let userGoals         = {};
     let userProfile       = {};
 
-    /* ── BMR calculation ── */
+    /* ── BMR calculation (Revised Harris-Benedict, 1984) ── */
     function calculateBMR(profile) {
         const w = parseFloat(profile.weight) || 70;
         const h = parseFloat(profile.height) || 170;

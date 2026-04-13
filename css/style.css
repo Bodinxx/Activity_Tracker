@@ -3,7 +3,7 @@
    CSS Custom Properties + 10 Themes
    ===================================================== */
 
-/* ---------- Default / Dark Theme ---------- */
+/* ── Default / Dark Theme (Harris-Benedict BMR coefficients documented in dashboard.js) ── */
 :root,
 body[data-theme="dark"] {
   --bg:           #1a1a2e;
@@ -13,6 +13,7 @@ body[data-theme="dark"] {
   --text-muted:   #9090a0;
   --accent:       #e94560;
   --accent-hover: #c73652;
+  --accent-rgb:   233,69,96;
   --border:       #2a2a4a;
   --input-bg:     #12122a;
   --shadow:       rgba(0,0,0,.45);
@@ -29,6 +30,7 @@ body[data-theme="light"] {
   --text-muted:   #666680;
   --accent:       #3b6fe0;
   --accent-hover: #2952c4;
+  --accent-rgb:   59,111,224;
   --border:       #d0d4e0;
   --input-bg:     #f8f9fc;
   --shadow:       rgba(0,0,0,.12);
@@ -45,6 +47,7 @@ body[data-theme="ocean"] {
   --text-muted:   #7abcd8;
   --accent:       #00c8f0;
   --accent-hover: #00a8cc;
+  --accent-rgb:   0,200,240;
   --border:       #104060;
   --input-bg:     #061525;
   --shadow:       rgba(0,0,0,.5);
@@ -61,6 +64,7 @@ body[data-theme="dark blue"] {
   --text-muted:   #6a9fd4;
   --accent:       #4d9de0;
   --accent-hover: #3080c4;
+  --accent-rgb:   77,157,224;
   --border:       #0e2545;
   --input-bg:     #040d18;
   --shadow:       rgba(0,0,0,.55);
@@ -77,6 +81,7 @@ body[data-theme="light blue"] {
   --text-muted:   #4a7099;
   --accent:       #0077c8;
   --accent-hover: #005ea8;
+  --accent-rgb:   0,119,200;
   --border:       #b8d8f0;
   --input-bg:     #f0f8ff;
   --shadow:       rgba(0,80,160,.12);
@@ -93,6 +98,7 @@ body[data-theme="dark green"] {
   --text-muted:   #60a870;
   --accent:       #2ecc71;
   --accent-hover: #25a85e;
+  --accent-rgb:   46,204,113;
   --border:       #1a3a20;
   --input-bg:     #080f0a;
   --shadow:       rgba(0,0,0,.5);
@@ -109,6 +115,7 @@ body[data-theme="light green"] {
   --text-muted:   #3a7a50;
   --accent:       #27ae60;
   --accent-hover: #1f9050;
+  --accent-rgb:   39,174,96;
   --border:       #b8e0c8;
   --input-bg:     #f0faf3;
   --shadow:       rgba(0,80,30,.12);
@@ -125,6 +132,7 @@ body[data-theme="dark red"] {
   --text-muted:   #c07070;
   --accent:       #e53935;
   --accent-hover: #c62828;
+  --accent-rgb:   229,57,53;
   --border:       #5a1a1a;
   --input-bg:     #120303;
   --shadow:       rgba(0,0,0,.5);
@@ -141,6 +149,7 @@ body[data-theme="light red"] {
   --text-muted:   #8a3a3a;
   --accent:       #e53935;
   --accent-hover: #c62828;
+  --accent-rgb:   229,57,53;
   --border:       #f0b8b8;
   --input-bg:     #fff5f5;
   --shadow:       rgba(150,0,0,.12);
@@ -157,6 +166,7 @@ body[data-theme="industrial"] {
   --text-muted:   #9090a0;
   --accent:       #ff6b00;
   --accent-hover: #e05500;
+  --accent-rgb:   255,107,0;
   --border:       #444448;
   --input-bg:     #141416;
   --shadow:       rgba(0,0,0,.45);

@@ -195,6 +195,7 @@ $role     = $_SESSION['role'] ?? 'user';
     var g = document.getElementById('p-gender').value;
     if (!w || !h || !a) return;
 
+    // BMR calculation: Revised Harris-Benedict (1984)
     var bmr = (g === 'f')
       ? 447.593 + (9.247 * w) + (3.098 * h) - (4.330 * a)
       : 88.362  + (13.397 * w) + (4.799 * h) - (5.677 * a);
