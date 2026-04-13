@@ -1,5 +1,9 @@
 <?php
+// Buffer any PHP notices/warnings so they never corrupt the JSON response body
+ob_start();
 session_start();
+ob_end_clean();
+
 header('Content-Type: application/json');
 
 define('DATA_DIR', __DIR__ . '/../data/');
