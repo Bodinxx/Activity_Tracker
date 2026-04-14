@@ -49,7 +49,6 @@ function getIsoWeekKey(string $date = ''): string {
 function getWeekDates(string $weekKey): array {
     [$year, $week] = explode('-', $weekKey);
     $dates = [];
-    // Find Monday of that ISO week
     $dto = new DateTime();
     $dto->setISODate((int)$year, (int)$week, 1);
     for ($i = 0; $i < 7; $i++) {
@@ -59,32 +58,12 @@ function getWeekDates(string $weekKey): array {
     return $dates;
 }
 
+function generateId(): string {
+    return uniqid('entry_', true);
+}
+
 $logsFile = DATA_DIR . 'activity_logs.json';
 $method   = $_SERVER['REQUEST_METHOD'];
-
-/* ── GET ── */
-if ($method === 'GET') {
-    $weekKey = $_GET['week'] ?? getIsoWeekKey();
-    $user    = $_GET['user'] ?? $sessionUser;
-
-    // Only admin may request other users
-    if ($user !== $sessionUser && ($_SESSION['role'] ?? 'user') !== 'admin') {
-        http_response_code(403);
-        echo json_encode(['error' => 'Forbidden']);
-        exit;
-    }
-
-    $logs      = readJsonFile($logsFile);
-    $weekDates = getWeekDates($weekKey);
-    $result    = [];
-
-    foreach ($weekDates as $d) {
-        $result[$d] = $logs[$d][$user] ?? null;
-    }
-
-    echo json_encode(['week' => $weekKey, 'days' => $result]);
-    exit;
-}
 
 /* ── POST ── */
 if ($method === 'POST') {
@@ -94,35 +73,135 @@ if ($method === 'POST') {
 
     switch ($action) {
 
-        case 'save_day': {
-            $date = trim($input['date'] ?? '');
-            $parsedDate = DateTime::createFromFormat('Y-m-d', $date);
-            if (!$date || !$parsedDate || $parsedDate->format('Y-m-d') !== $date) {
+        case 'add_entry': {
+            $timestamp = trim($input['timestamp'] ?? '');
+            $type      = trim($input['type'] ?? '');
+            $quantity  = floatval($input['quantity'] ?? 0);
+            $unit      = trim($input['unit'] ?? '');
+            $note      = trim($input['note'] ?? '');
+
+            if (!$timestamp || !$type) {
                 http_response_code(400);
-                echo json_encode(['error' => 'Invalid date format. Use YYYY-MM-DD.']);
+                echo json_encode(['error' => 'Missing timestamp or type']);
                 exit;
             }
 
-            $dayData = [
-                'water'      => floatval($input['water'] ?? 0),
-                'sleep'      => floatval($input['sleep'] ?? 0),
-                'meals'      => intval($input['meals'] ?? 0),
-                'steps'      => intval($input['steps'] ?? 0),
-                'activities' => is_array($input['activities'] ?? null) ? $input['activities'] : [],
-                'saved_at'   => date('Y-m-d H:i:s'),
+            // Validate timestamp format
+            $posT = strpos($timestamp, 'T');
+            if ($posT === false) {
+                $parsedDate = DateTime::createFromFormat('Y-m-d', $timestamp);
+                if (!$parsedDate) {
+                    http_response_code(400);
+                    echo json_encode(['error' => 'Invalid timestamp format']);
+                    exit;
+                }
+                $timestamp = $parsedDate->format('Y-m-d') . 'T00:00:00';
+            }
+
+            $entry = [
+                'id'        => generateId(),
+                'userId'    => $sessionUser,
+                'timestamp' => $timestamp,
+                'type'      => $type,
+                'quantity'  => $quantity,
+                'unit'      => $unit,
+                'note'      => $note,
             ];
 
             $logs = readJsonFile($logsFile);
-            if (!isset($logs[$date])) $logs[$date] = [];
-            $logs[$date][$sessionUser] = $dayData;
+            $logs[] = $entry;
 
             if (!writeJsonFile($logsFile, $logs)) {
                 http_response_code(500);
-                echo json_encode(['error' => 'Could not save log']);
+                echo json_encode(['error' => 'Could not save entry']);
                 exit;
             }
 
-            echo json_encode(['success' => true, 'date' => $date]);
+            echo json_encode(['success' => true, 'entry' => $entry]);
+            break;
+        }
+
+        case 'edit_entry': {
+            $entryId   = trim($input['id'] ?? '');
+            $quantity  = floatval($input['quantity'] ?? 0);
+            $unit      = trim($input['unit'] ?? '');
+            $note      = trim($input['note'] ?? '');
+            $timestamp = trim($input['timestamp'] ?? '');
+
+            if (!$entryId) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Missing entry ID']);
+                exit;
+            }
+
+            $logs = readJsonFile($logsFile);
+            $found = false;
+
+            foreach ($logs as &$entry) {
+                if ($entry['id'] === $entryId && $entry['userId'] === $sessionUser) {
+                    $entry['quantity'] = $quantity;
+                    $entry['unit'] = $unit;
+                    $entry['note'] = $note;
+                    if ($timestamp) {
+                        $entry['timestamp'] = $timestamp;
+                    }
+                    $found = true;
+                    break;
+                }
+            }
+
+            if (!$found) {
+                http_response_code(404);
+                echo json_encode(['error' => 'Entry not found']);
+                exit;
+            }
+
+            if (!writeJsonFile($logsFile, $logs)) {
+                http_response_code(500);
+                echo json_encode(['error' => 'Could not update entry']);
+                exit;
+            }
+
+            echo json_encode(['success' => true]);
+            break;
+        }
+
+        case 'delete_entry': {
+            $entryId = trim($input['id'] ?? '');
+
+            if (!$entryId) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Missing entry ID']);
+                exit;
+            }
+
+            $logs = readJsonFile($logsFile);
+            $found = false;
+
+            foreach ($logs as $idx => $entry) {
+                if ($entry['id'] === $entryId && $entry['userId'] === $sessionUser) {
+                    unset($logs[$idx]);
+                    $found = true;
+                    break;
+                }
+            }
+
+            if (!$found) {
+                http_response_code(404);
+                echo json_encode(['error' => 'Entry not found']);
+                exit;
+            }
+
+            // Reindex array
+            $logs = array_values($logs);
+
+            if (!writeJsonFile($logsFile, $logs)) {
+                http_response_code(500);
+                echo json_encode(['error' => 'Could not delete entry']);
+                exit;
+            }
+
+            echo json_encode(['success' => true]);
             break;
         }
 
@@ -130,13 +209,52 @@ if ($method === 'POST') {
             $weekKey   = $input['week'] ?? getIsoWeekKey();
             $logs      = readJsonFile($logsFile);
             $weekDates = getWeekDates($weekKey);
-            $result    = [];
+            $weekStart = $weekDates[0];
+            $weekEnd   = $weekDates[6];
 
-            foreach ($weekDates as $d) {
-                $result[$d] = $logs[$d][$sessionUser] ?? null;
+            // Filter entries for this user and week
+            $entries = array_filter($logs, function ($entry) use ($sessionUser, $weekStart, $weekEnd) {
+                $entryDate = substr($entry['timestamp'], 0, 10);
+                return $entry['userId'] === $sessionUser 
+                    && $entryDate >= $weekStart 
+                    && $entryDate <= $weekEnd;
+            });
+
+            echo json_encode([
+                'week'    => $weekKey,
+                'entries' => array_values($entries),
+                'dates'   => $weekDates
+            ]);
+            break;
+        }
+
+        case 'get_day': {
+            $date = trim($input['date'] ?? '');
+            $parsedDate = DateTime::createFromFormat('Y-m-d', $date);
+            
+            if (!$date || !$parsedDate || $parsedDate->format('Y-m-d') !== $date) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Invalid date format. Use YYYY-MM-DD.']);
+                exit;
             }
 
-            echo json_encode(['week' => $weekKey, 'days' => $result]);
+            $logs = readJsonFile($logsFile);
+            
+            // Filter entries for this user and date
+            $entries = array_filter($logs, function ($entry) use ($sessionUser, $date) {
+                $entryDate = substr($entry['timestamp'], 0, 10);
+                return $entry['userId'] === $sessionUser && $entryDate === $date;
+            });
+
+            // Sort by timestamp descending (newest first)
+            usort($entries, function ($a, $b) {
+                return strtotime($b['timestamp']) - strtotime($a['timestamp']);
+            });
+
+            echo json_encode([
+                'date'    => $date,
+                'entries' => array_values($entries)
+            ]);
             break;
         }
 
@@ -148,4 +266,6 @@ if ($method === 'POST') {
 }
 
 http_response_code(405);
+echo json_encode(['error' => 'Method not allowed']);
+
 echo json_encode(['error' => 'Method not allowed']);

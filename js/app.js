@@ -160,12 +160,30 @@
     /* ── Navbar toggle init ── */
     function initNavbarToggle() {
         var toggle = document.getElementById('navbar-toggle');
-        if (!toggle) return;
+        var navbar = document.querySelector('.navbar');
+        var navMenu = document.querySelector('.navbar-nav');
+        if (!toggle || !navbar || !navMenu) return;
+        
         toggle.addEventListener('click', function () {
-            var nav = this.closest('.navbar');
-            if (!nav) return;
-            nav.classList.toggle('expanded');
-            this.setAttribute('aria-expanded', nav.classList.contains('expanded') ? 'true' : 'false');
+            var isExpanded = navbar.classList.contains('expanded');
+            navbar.classList.toggle('expanded');
+            toggle.setAttribute('aria-expanded', !isExpanded);
+        });
+        
+        // Close menu when a nav link is clicked
+        navMenu.querySelectorAll('a').forEach(function(link) {
+            link.addEventListener('click', function() {
+                navbar.classList.remove('expanded');
+                toggle.setAttribute('aria-expanded', 'false');
+            });
+        });
+        
+        // Close menu when clicking outside
+        document.addEventListener('click', function(event) {
+            if (!navbar.contains(event.target)) {
+                navbar.classList.remove('expanded');
+                toggle.setAttribute('aria-expanded', 'false');
+            }
         });
     }
 

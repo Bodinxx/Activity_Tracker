@@ -1,27 +1,34 @@
 /**
- * dashboard.js – Dashboard logic
+ * dashboard.js – Dashboard logic for individual entry tracking
  * Depends on window.App (app.js)
  */
 (function () {
     'use strict';
 
     let activitiesCatalog = {};   // { name: {unit, factor, category} }
-    let currentWeekDays   = {};   // { 'YYYY-MM-DD': dayData|null }
-    let pendingActivities = [];   // activities added in the form but not yet saved
-    let userGoals         = {};
-    let userProfile       = {};
+    let weekEntries = [];         // All entries for current week
+    let userGoals = {};
+    let userProfile = {};
 
-    /* ── BMR calculation (Revised Harris-Benedict, 1984) ── */
+    /* ── Constants ── */
+    const ENTRY_TYPES = {
+        'sleep': { icon: '😴', label: 'Sleep', unit: 'hours' },
+        'meal': { icon: '🥗', label: 'Clean Meal', unit: 'meals' },
+        'water': { icon: '💧', label: 'Water', unit: 'glasses' },
+        'steps': { icon: '👟', label: 'Steps', unit: 'steps' },
+        'activity': { icon: '🏋️', label: 'Activity', unit: 'custom' },
+    };
+
+    /* ── BMR calculation ── */
     function calculateBMR(profile) {
         const w = parseFloat(profile.weight) || 70;
         const h = parseFloat(profile.height) || 170;
-        const a = parseFloat(profile.age)    || 30;
+        const a = parseFloat(profile.age) || 30;
         const g = profile.gender || 'm';
 
         if (g === 'f') {
             return 447.593 + (9.247 * w) + (3.098 * h) - (4.330 * a);
         }
-        // male
         return 88.362 + (13.397 * w) + (4.799 * h) - (5.677 * a);
     }
 
@@ -30,20 +37,16 @@
     }
 
     /* ── Points calculation ── */
-    function calculatePoints(activities) {
-        let total = 0;
-        (activities || []).forEach(function (act) {
-            const catalog = activitiesCatalog[act.name];
-            if (catalog) {
-                total += (parseFloat(act.quantity) || 0) * catalog.factor;
-            } else if (act.factor) {
-                total += (parseFloat(act.quantity) || 0) * parseFloat(act.factor);
-            }
-        });
-        return Math.round(total * 100) / 100;
+    function calculateActivityPoints(activity) {
+        if (!activity || activity.type !== 'activity') return 0;
+        const catalog = activitiesCatalog[activity.name];
+        if (catalog) {
+            return (parseFloat(activity.quantity) || 0) * catalog.factor;
+        }
+        return 0;
     }
 
-    /* ── ISO week helpers ── */
+    /* ── ISO week + date helpers ── */
     function getIsoWeek(date) {
         const d = new Date(date);
         d.setHours(0, 0, 0, 0);
@@ -54,9 +57,9 @@
     }
 
     function getWeekDates() {
-        const today   = new Date();
-        const dow     = today.getDay() || 7; // Mon=1
-        const monday  = new Date(today);
+        const today = new Date();
+        const dow = today.getDay() || 7;
+        const monday = new Date(today);
         monday.setDate(today.getDate() - dow + 1);
         const dates = [];
         for (let i = 0; i < 7; i++) {
@@ -72,6 +75,62 @@
         return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
     }
 
+    function formatTime(timestamp) {
+        const date = new Date(timestamp + 'Z');
+        return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    }
+
+    /* ── Aggregate entries by date ── */
+    function aggregateByDate(entries, dateStr) {
+        return entries.filter(e => e.timestamp.substring(0, 10) === dateStr);
+    }
+
+    function aggregateWeekData(entries) {
+        const result = {};
+        const weekDates = getWeekDates();
+
+        weekDates.forEach(d => {
+            const dayEntries = aggregateByDate(entries, d);
+            result[d] = aggregateDayEntries(dayEntries);
+        });
+
+        return result;
+    }
+
+    function aggregateDayEntries(entries) {
+        const agg = {
+            steps: 0,
+            water: 0,
+            sleep: 0,
+            meals: 0,
+            activities: [],
+            totalPoints: 0,
+        };
+
+        entries.forEach(e => {
+            switch (e.type) {
+                case 'steps':
+                    agg.steps += parseFloat(e.quantity) || 0;
+                    break;
+                case 'water':
+                    agg.water += parseFloat(e.quantity) || 0;
+                    break;
+                case 'sleep':
+                    agg.sleep += parseFloat(e.quantity) || 0;
+                    break;
+                case 'meal':
+                    agg.meals += 1;
+                    break;
+                case 'activity':
+                    agg.activities.push(e);
+                    agg.totalPoints += calculateActivityPoints(e);
+                    break;
+            }
+        });
+
+        return agg;
+    }
+
     /* ── Load activities catalog ── */
     function loadActivitiesCatalog() {
         return App.fetchJSON('./api/admin.php', { action: 'get_activities' })
@@ -81,22 +140,21 @@
                     populateActivityDropdown();
                 }
             })
-            .catch(function () {});
+            .catch(function () { });
     }
 
     function populateActivityDropdown() {
         const sel = document.getElementById('activity-select');
         if (!sel) return;
 
-        // Group by category
+        sel.innerHTML = '<option value="">— Select Activity —</option>';
         const categories = {};
+
         Object.entries(activitiesCatalog).forEach(function ([name, info]) {
             const cat = info.category || 'Other';
             if (!categories[cat]) categories[cat] = [];
             categories[cat].push({ name, ...info });
         });
-
-        sel.innerHTML = '<option value="">— Select Activity —</option>';
 
         Object.keys(categories).sort().forEach(function (cat) {
             const group = document.createElement('optgroup');
@@ -123,8 +181,8 @@
 
         return App.fetchJSON('./api/log.php', { action: 'get_week' })
             .then(function (data) {
-                if (data.days) {
-                    currentWeekDays = data.days;
+                if (data.entries && Array.isArray(data.entries)) {
+                    weekEntries = data.entries;
                     updateProgressBars();
                     renderWeekTable();
                 }
@@ -136,45 +194,45 @@
 
     /* ── Progress bars ── */
     function updateProgressBars() {
-        const days = Object.values(currentWeekDays).filter(Boolean);
+        const weekData = aggregateWeekData(weekEntries);
+        const days = Object.values(weekData).filter(d => d && (d.steps || d.water || d.sleep || d.meals || d.activities.length));
         const goals = userGoals;
 
         // Steps – average
-        const stepsAvg = days.length
-            ? days.reduce(function (s, d) { return s + (d.steps || 0); }, 0) / days.length
-            : 0;
+        const stepsTotal = Object.values(weekData).reduce((s, d) => s + (d.steps || 0), 0);
+        const stepsAvg = days.length ? stepsTotal / 7 : 0;
         const stepsGoal = parseFloat(goals.avg_steps) || 6000;
         setProgressBar('progress-steps', stepsAvg, stepsGoal,
             Math.round(stepsAvg) + ' avg', Math.round(stepsGoal) + ' goal');
 
         // Sleep – average
-        const sleepAvg = days.length
-            ? days.reduce(function (s, d) { return s + (d.sleep || 0); }, 0) / days.length
-            : 0;
+        const sleepTotal = Object.values(weekData).reduce((s, d) => s + (d.sleep || 0), 0);
+        const sleepAvg = sleepTotal / 7;
         const sleepGoal = parseFloat(goals.sleep_goal) || 7;
         setProgressBar('progress-sleep', sleepAvg, sleepGoal,
             sleepAvg.toFixed(1) + 'h avg', sleepGoal + 'h goal');
 
         // Clean meals – total
-        const mealsTotal = days.reduce(function (s, d) { return s + (d.meals || 0); }, 0);
-        const mealsGoal  = parseFloat(goals.clean_meals_goal) || 14;
+        const mealsTotal = Object.values(weekData).reduce((s, d) => s + (d.meals || 0), 0);
+        const mealsGoal = parseFloat(goals.clean_meals_goal) || 14;
         setProgressBar('progress-meals', mealsTotal, mealsGoal,
             mealsTotal + ' meals', mealsGoal + ' goal');
 
-        // Activity points
-        let totalPoints = 0;
-        Object.values(currentWeekDays).forEach(function (day) {
-            if (day) totalPoints += calculatePoints(day.activities);
-        });
-        totalPoints = Math.round(totalPoints * 100) / 100;
+        // Water – total
+        const waterTotal = Object.values(weekData).reduce((s, d) => s + (d.water || 0), 0);
+        const waterGoal = (parseFloat(goals.water_goal) || 8) * 7;
+        setProgressBar('progress-water', waterTotal, waterGoal,
+            waterTotal + ' glasses', Math.round(waterGoal) + ' goal');
 
+        // Activity points
+        const totalPoints = Object.values(weekData).reduce((s, d) => s + (d.totalPoints || 0), 0);
         const workoutHoursGoal = parseFloat(goals.workout_hours) || 5;
         const pct = workoutHoursGoal > 0
             ? Math.min(Math.round((totalPoints / (workoutHoursGoal * 60)) * 100), 999)
             : 0;
 
-        const ptsEl  = document.getElementById('total-points');
-        const pctEl  = document.getElementById('points-pct');
+        const ptsEl = document.getElementById('total-points');
+        const pctEl = document.getElementById('points-pct');
         if (ptsEl) ptsEl.textContent = totalPoints.toFixed(1);
         if (pctEl) pctEl.textContent = pct + '% of target';
 
@@ -185,9 +243,9 @@
     function setProgressBar(id, value, goal, valueLbl, goalLbl) {
         const wrapper = document.getElementById(id);
         if (!wrapper) return;
-        const fill  = wrapper.querySelector('.progress-bar-fill');
-        const vLbl  = wrapper.querySelector('.progress-value');
-        const gLbl  = wrapper.querySelector('.progress-goal');
+        const fill = wrapper.querySelector('.progress-bar-fill');
+        const vLbl = wrapper.querySelector('.progress-value');
+        const gLbl = wrapper.querySelector('.progress-goal');
 
         const pct = goal > 0 ? Math.min((value / goal) * 100, 100) : 0;
         if (fill) fill.style.width = pct + '%';
@@ -195,233 +253,306 @@
         if (gLbl) gLbl.textContent = goalLbl;
     }
 
-    /* ── Week table ── */
+    /* ── Render week table ── */
     function renderWeekTable() {
         const tbody = document.getElementById('week-table-body');
         if (!tbody) return;
-        tbody.innerHTML = '';
 
-        const sortedDates = Object.keys(currentWeekDays).sort();
-        const today = new Date().toISOString().split('T')[0];
-
-        sortedDates.forEach(function (date) {
-            const day = currentWeekDays[date];
-            const tr  = document.createElement('tr');
-            if (date === today) tr.style.background = 'rgba(var(--accent-rgb,233,69,96),.06)';
-
-            const pts = day ? calculatePoints(day.activities) : 0;
-            const actNames = day && day.activities && day.activities.length
-                ? day.activities.map(function (a) { return a.name; }).join(', ')
-                : '—';
-
-            tr.innerHTML =
-                '<td>' + formatDate(date) + (date === today ? ' <span style="color:var(--accent);font-size:.75rem">(today)</span>' : '') + '</td>' +
-                '<td>' + (day ? (day.steps || 0).toLocaleString() : '<span class="no-data">—</span>') + '</td>' +
-                '<td>' + (day ? (day.sleep || 0) + 'h' : '<span class="no-data">—</span>') + '</td>' +
-                '<td>' + (day ? (day.water || 0) + ' gl' : '<span class="no-data">—</span>') + '</td>' +
-                '<td>' + (day ? (day.meals || 0) : '<span class="no-data">—</span>') + '</td>' +
-                '<td>' + (day ? '<span style="color:var(--accent);font-weight:600">' + pts.toFixed(1) + '</span>' : '<span class="no-data">—</span>') + '</td>' +
-                '<td style="font-size:.8rem;color:var(--text-muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + App.escapeHtml(actNames) + '">' + App.escapeHtml(actNames) + '</td>';
-
-            tbody.appendChild(tr);
+        const weekData = aggregateWeekData(weekEntries);
+        const weekDates = getWeekDates();
+        const rows = weekDates.map(date => {
+            const agg = weekData[date];
+            const activities = (agg.activities || []).map(a => a.name).join(', ');
+            return `
+        <tr>
+          <td>${formatDate(date)}</td>
+          <td>${agg.steps || 0}</td>
+          <td>${agg.sleep || 0}</td>
+          <td>${agg.water || 0}</td>
+          <td>${agg.meals || 0}</td>
+          <td>${(agg.totalPoints || 0).toFixed(1)}</td>
+          <td>${activities || '—'}</td>
+        </tr>`;
         });
+
+        tbody.innerHTML = rows.join('');
     }
 
-    /* ── Pending activities list ── */
-    function renderPendingActivities() {
-        const list = document.getElementById('pending-activities');
-        if (!list) return;
+    /* ── Render day breakdown (individual entries) ── */
+    function renderDetailSummary(dateStr) {
+        const summary = document.getElementById('detail-summary');
+        if (!summary) return;
 
-        if (pendingActivities.length === 0) {
-            list.innerHTML = '<li style="color:var(--text-muted);font-size:.85rem;padding:.25rem 0">No activities added yet.</li>';
-            updatePreviewPoints();
+        const dayEntries = aggregateByDate(weekEntries, dateStr);
+
+        if (!dayEntries || dayEntries.length === 0) {
+            summary.innerHTML = '<p style="color:var(--text-muted);font-size:.85rem">No entries logged for <strong>' + formatDate(dateStr) + '</strong>.</p>';
             return;
         }
 
-        list.innerHTML = '';
-        pendingActivities.forEach(function (act, idx) {
-            const pts  = calculatePoints([act]);
-            const li   = document.createElement('li');
-            li.className = 'activity-list-item';
-            li.innerHTML =
-                '<span class="act-name">' + App.escapeHtml(act.name) + '</span>' +
-                '<span class="act-detail">' + act.quantity + ' ' + App.escapeHtml(act.unit) + '</span>' +
-                '<span class="act-pts">+' + pts.toFixed(2) + ' pts</span>' +
-                '<button class="btn btn-sm btn-danger remove-act" data-idx="' + idx + '" title="Remove">&times;</button>';
-            list.appendChild(li);
+        let html = '<div style="font-size:.9rem">';
+        html += '<div style="color:var(--text-muted);margin-bottom:.5rem;font-size:.85rem">' + formatDate(dateStr) + ' — ' + dayEntries.length + ' entries</div>';
+
+        dayEntries.forEach(function (entry) {
+            const typeInfo = ENTRY_TYPES[entry.type] || {};
+            const icon = typeInfo.icon || '📍';
+            const time = formatTime(entry.timestamp);
+            const note = entry.note ? '<div style="margin-top:.25rem;font-size:.8rem;color:var(--text-muted);font-style:italic">' + App.escapeHtml(entry.note) + '</div>' : '';
+
+            html += '<div class="detail-item">';
+            html += '<div>';
+            html += '<div class="detail-item-label">' + icon + ' ' + App.escapeHtml(entry.name || typeInfo.label || entry.type) + '</div>';
+            html += '<div class="detail-item-value">' + entry.quantity + ' ' + App.escapeHtml(entry.unit || typeInfo.unit || '') + ' @ ' + time + '</div>';
+            html += note;
+            html += '</div>';
+            html += '<div style="display:flex;gap:.25rem">';
+            html += '<button class="btn btn-sm btn-secondary" data-entry-id="' + entry.id + '" onclick="window.Dashboard.editEntry(\'' + entry.id + '\')">✏️</button>';
+            html += '<button class="btn btn-sm btn-secondary" data-entry-id="' + entry.id + '" onclick="window.Dashboard.deleteEntry(\'' + entry.id + '\')">🗑️</button>';
+            html += '</div>';
+            html += '</div>';
         });
 
-        list.querySelectorAll('.remove-act').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                pendingActivities.splice(parseInt(this.dataset.idx, 10), 1);
-                renderPendingActivities();
+        html += '</div>';
+        summary.innerHTML = html;
+    }
+
+    /* ── Add entry ── */
+    function addEntry(timestamp, type, quantity, unit, note) {
+        const entryData = {
+            action: 'add_entry',
+            timestamp: timestamp,
+            type: type,
+            quantity: quantity,
+            unit: unit,
+            note: note,
+        };
+
+        return App.fetchJSON('./api/log.php', entryData)
+            .then(function (resp) {
+                if (resp.success) {
+                    App.showToast('Entry logged!', 'success');
+                    loadWeekData();
+                    return resp.entry;
+                } else {
+                    App.showToast(resp.error || 'Failed to log entry', 'error');
+                }
+            })
+            .catch(function () {
+                App.showToast('Network error logging entry', 'error');
             });
-        });
-
-        updatePreviewPoints();
     }
 
-    function updatePreviewPoints() {
-        const previewEl = document.getElementById('preview-points');
-        if (!previewEl) return;
-        const pts = calculatePoints(pendingActivities);
-        previewEl.textContent = pts.toFixed(2) + ' pts (unsaved)';
+    function getCurrentTimestamp() {
+        const dateVal = document.getElementById('log-date')?.value || new Date().toISOString().split('T')[0];
+        const timeVal = document.getElementById('log-time')?.value || '00:00';
+        return dateVal + 'T' + (timeVal.length === 5 ? timeVal + ':00' : timeVal);
     }
 
-    /* ── Save day ── */
-    function saveDay(date, data) {
-        return App.fetchJSON('./api/log.php', Object.assign({ action: 'save_day', date: date }, data));
+    function getSharedNote() {
+        return document.getElementById('entry-note')?.value || '';
     }
 
-    /* ── Init dashboard ── */
+    function logTypedEntry(type, quantity, unit) {
+        if (!quantity || quantity <= 0) {
+            App.showToast('Please enter a valid quantity', 'warning');
+            return Promise.resolve();
+        }
+        const timestamp = getCurrentTimestamp();
+        const note = getSharedNote();
+        return addEntry(timestamp, type, quantity, unit, note)
+            .then(function () {
+                const detailDate = document.getElementById('detail-date');
+                if (detailDate) renderDetailSummary(detailDate.value);
+            });
+    }
+
+    /* ── Delete entry ── */
+    function deleteEntry(entryId) {
+        if (!confirm('Delete this entry?')) return;
+
+        return App.fetchJSON('./api/log.php', { action: 'delete_entry', id: entryId })
+            .then(function (resp) {
+                if (resp.success) {
+                    App.showToast('Entry deleted', 'success');
+                    loadWeekData();
+                    const detailDate = document.getElementById('detail-date');
+                    if (detailDate) renderDetailSummary(detailDate.value);
+                } else {
+                    App.showToast(resp.error || 'Failed to delete', 'error');
+                }
+            })
+            .catch(function () {
+                App.showToast('Network error deleting entry', 'error');
+            });
+    }
+
+    /* ── Edit entry ── */
+    function editEntry(entryId) {
+        const entry = weekEntries.find(e => e.id === entryId);
+        if (!entry) {
+            App.showToast('Entry not found', 'error');
+            return;
+        }
+
+        const newQty = prompt('New quantity:', entry.quantity);
+        if (newQty === null) return;
+
+        const newNote = prompt('Note:', entry.note || '');
+        if (newNote === null) return;
+
+        const updateData = {
+            action: 'edit_entry',
+            id: entryId,
+            quantity: parseFloat(newQty) || entry.quantity,
+            unit: entry.unit,
+            note: newNote,
+        };
+
+        App.fetchJSON('./api/log.php', updateData)
+            .then(function (resp) {
+                if (resp.success) {
+                    App.showToast('Entry updated', 'success');
+                    loadWeekData();
+                    const detailDate = document.getElementById('detail-date');
+                    if (detailDate) renderDetailSummary(detailDate.value);
+                } else {
+                    App.showToast(resp.error || 'Failed to update', 'error');
+                }
+            })
+            .catch(function () {
+                App.showToast('Network error updating entry', 'error');
+            });
+    }
+
+    /* ── Init ── */
     function init() {
-        // Set today's date as default
-        const datePicker = document.getElementById('log-date');
-        if (datePicker) {
-            datePicker.value = new Date().toISOString().split('T')[0];
-            datePicker.max   = new Date().toISOString().split('T')[0];
+        // Set today's date
+        const today = new Date().toISOString().split('T')[0];
+
+        const logDate = document.getElementById('log-date');
+        if (logDate) {
+            logDate.value = today;
+            logDate.max = today;
+        }
+
+        const logTime = document.getElementById('log-time');
+        if (logTime) {
+            const now = new Date();
+            logTime.value = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+        }
+
+        const detailDate = document.getElementById('detail-date');
+        if (detailDate) {
+            detailDate.value = today;
+            detailDate.max = today;
         }
 
         // Load catalog, then week data
         App.initAuth({
             onLogin: function (data) {
-                userGoals   = data.goals   || {};
+                userGoals = data.goals || {};
                 userProfile = data.profile || {};
                 loadActivitiesCatalog().then(function () {
-                    loadWeekData();
+                    loadWeekData().then(function () {
+                        if (detailDate) renderDetailSummary(detailDate.value);
+                    });
                 });
 
                 App.startLogoutTimer();
             }
         });
 
-        // Add activity button
-        const addActBtn = document.getElementById('add-activity-btn');
-        if (addActBtn) {
-            addActBtn.addEventListener('click', function () {
-                const sel = document.getElementById('activity-select');
-                const qty = document.getElementById('activity-qty');
-                if (!sel || !qty) return;
-
-                const name = sel.value;
-                const quantity = parseFloat(qty.value);
-
-                if (!name) { App.showToast('Please select an activity', 'warning'); return; }
-                if (!quantity || quantity <= 0) { App.showToast('Please enter a valid quantity', 'warning'); return; }
-
-                const catalog = activitiesCatalog[name];
-                if (!catalog) { App.showToast('Activity not found in catalog', 'error'); return; }
-
-                pendingActivities.push({
-                    name:     name,
-                    quantity: quantity,
-                    unit:     catalog.unit,
-                    factor:   catalog.factor,
-                    category: catalog.category,
-                });
-
-                renderPendingActivities();
-                sel.value = '';
-                qty.value = '';
+        const sleepAddBtn = document.getElementById('sleep-add-btn');
+        if (sleepAddBtn) {
+            sleepAddBtn.addEventListener('click', function () {
+                const qtyVal = parseFloat(document.getElementById('sleep-hours')?.value || 0);
+                logTypedEntry('sleep', qtyVal, 'hours');
             });
         }
 
-        const waterIncBtn = document.getElementById('water-inc-btn');
-        if (waterIncBtn) {
-            waterIncBtn.addEventListener('click', function () {
-                const input = document.getElementById('log-water');
-                if (!input) return;
-                const current = parseFloat(input.value) || 0;
-                input.value = ((current + 1).toFixed(1)).replace(/\.0$/, '');
+        const mealQuickBtn = document.getElementById('meal-quick-btn');
+        if (mealQuickBtn) {
+            mealQuickBtn.addEventListener('click', function () {
+                const count = document.getElementById('meal-count');
+                const current = parseInt(count?.value || '0', 10) || 0;
+                count.value = current + 1;
+                logTypedEntry('meal', 1, 'meals');
             });
         }
 
-        const mealsIncBtn = document.getElementById('meals-inc-btn');
-        if (mealsIncBtn) {
-            mealsIncBtn.addEventListener('click', function () {
-                const input = document.getElementById('log-meals');
-                if (!input) return;
-                const current = parseInt(input.value || '0', 10) || 0;
-                input.value = current + 1;
+        const mealAddBtn = document.getElementById('meal-add-btn');
+        if (mealAddBtn) {
+            mealAddBtn.addEventListener('click', function () {
+                const qtyVal = parseInt(document.getElementById('meal-count')?.value || '0', 10) || 0;
+                logTypedEntry('meal', qtyVal, 'meals');
             });
         }
 
-        // Save day form
-        const saveDayBtn = document.getElementById('save-day-btn');
-        if (saveDayBtn) {
-            saveDayBtn.addEventListener('click', function () {
-                const date  = document.getElementById('log-date')?.value;
-                const water = parseFloat(document.getElementById('log-water')?.value || 0);
-                const sleep = parseFloat(document.getElementById('log-sleep')?.value || 0);
-                const meals = parseInt(document.getElementById('log-meals')?.value || 0, 10);
-                const steps = parseInt(document.getElementById('log-steps')?.value || 0, 10);
-
-                if (!date) { App.showToast('Please select a date', 'warning'); return; }
-
-                saveDayBtn.disabled = true;
-                saveDayBtn.innerHTML = '<span class="spinner"></span> Saving…';
-
-                saveDay(date, {
-                    water:      water,
-                    sleep:      sleep,
-                    meals:      meals,
-                    steps:      steps,
-                    activities: pendingActivities,
-                }).then(function (resp) {
-                    if (resp.success) {
-                        App.showToast('Day saved successfully!', 'success');
-                        pendingActivities = [];
-                        renderPendingActivities();
-                        loadWeekData();
-                    } else {
-                        App.showToast(resp.error || 'Failed to save', 'error');
-                    }
-                }).catch(function () {
-                    App.showToast('Network error saving day', 'error');
-                }).finally(function () {
-                    saveDayBtn.disabled = false;
-                    saveDayBtn.innerHTML = '💾 Save Day';
-                });
+        const waterQuickBtn = document.getElementById('water-quick-btn');
+        if (waterQuickBtn) {
+            waterQuickBtn.addEventListener('click', function () {
+                const count = document.getElementById('water-count');
+                const current = parseFloat(count?.value || '0') || 0;
+                count.value = (current + 1).toFixed(1).replace(/\.0$/, '');
+                logTypedEntry('water', 1, 'glasses');
             });
         }
 
-        // Load existing day when date changes
-        const datePicker2 = document.getElementById('log-date');
-        if (datePicker2) {
-            datePicker2.addEventListener('change', function () {
-                const d = this.value;
-                if (currentWeekDays[d]) {
-                    const day = currentWeekDays[d];
-                    document.getElementById('log-water').value  = day.water  || '';
-                    document.getElementById('log-sleep').value  = day.sleep  || '';
-                    document.getElementById('log-meals').value  = day.meals  || '';
-                    document.getElementById('log-steps').value  = day.steps  || '';
-                    pendingActivities = (day.activities || []).slice();
-                    renderPendingActivities();
-                } else {
-                    document.getElementById('log-water').value  = '';
-                    document.getElementById('log-sleep').value  = '';
-                    document.getElementById('log-meals').value  = '';
-                    document.getElementById('log-steps').value  = '';
-                    pendingActivities = [];
-                    renderPendingActivities();
+        const waterAddBtn = document.getElementById('water-add-btn');
+        if (waterAddBtn) {
+            waterAddBtn.addEventListener('click', function () {
+                const qtyVal = parseFloat(document.getElementById('water-count')?.value || 0);
+                logTypedEntry('water', qtyVal, 'glasses');
+            });
+        }
+
+        const stepsAddBtn = document.getElementById('steps-add-btn');
+        if (stepsAddBtn) {
+            stepsAddBtn.addEventListener('click', function () {
+                const qtyVal = parseInt(document.getElementById('steps-count')?.value || '0', 10) || 0;
+                logTypedEntry('steps', qtyVal, 'steps');
+            });
+        }
+
+        const activityAddBtn = document.getElementById('activity-add-btn');
+        if (activityAddBtn) {
+            activityAddBtn.addEventListener('click', function () {
+                const activitySelect = document.getElementById('activity-select');
+                const activityName = activitySelect?.value;
+                const quantity = parseFloat(document.getElementById('activity-qty')?.value || 0);
+                if (!activityName) {
+                    App.showToast('Please select an activity', 'warning');
+                    return;
                 }
+                if (!quantity || quantity <= 0) {
+                    App.showToast('Please enter a valid quantity', 'warning');
+                    return;
+                }
+                const catalog = activitiesCatalog[activityName];
+                logTypedEntry('activity', quantity, catalog?.unit || '');
+            });
+        }
+
+        // Detail date picker listener
+        if (detailDate) {
+            detailDate.addEventListener('change', function () {
+                renderDetailSummary(this.value);
             });
         }
     }
 
     /* ── Expose ── */
     window.Dashboard = {
-        init:               init,
-        loadWeekData:       loadWeekData,
-        saveDay:            saveDay,
-        calculatePoints:    calculatePoints,
-        updateProgressBars: updateProgressBars,
-        calculateBMR:       calculateBMR,
-        getMealThreshold:   getMealThreshold,
+        init: init,
+        loadWeekData: loadWeekData,
+        deleteEntry: deleteEntry,
+        editEntry: editEntry,
+        calculateActivityPoints: calculateActivityPoints,
+        calculateBMR: calculateBMR,
+        getMealThreshold: getMealThreshold,
     };
 
-    // Auto-init when DOM ready
+    // Auto-init
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {

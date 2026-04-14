@@ -273,6 +273,7 @@ h1, h2, h3, h4 { color: var(--text); font-weight: 600; }
     flex-wrap: wrap;
     gap: 0.75rem;
     padding: 0.75rem 1rem;
+    position: relative;
   }
 
   .navbar-toggle {
@@ -281,9 +282,18 @@ h1, h2, h3, h4 { color: var(--text); font-weight: 600; }
 
   .navbar-nav {
     display: none;
+    position: absolute;
+    top: 60px;
+    left: 0;
+    right: 0;
     flex-direction: column;
     width: 100%;
     gap: 0.25rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 2px 8px var(--shadow);
+    padding: 0.5rem;
+    z-index: 1000;
   }
 
   .navbar.expanded .navbar-nav {
@@ -310,7 +320,7 @@ h1, h2, h3, h4 { color: var(--text); font-weight: 600; }
    Page Layout
    ===================================================== */
 .page-container {
-  max-width: 1200px;
+  max-width: 98vw;
   margin: 0 auto;
   padding: 1.5rem;
 }
@@ -329,11 +339,11 @@ h1, h2, h3, h4 { color: var(--text); font-weight: 600; }
   margin-top: 0.25rem;
 }
 
-/* Dashboard 2-column grid */
+/* Dashboard single-column floating layout */
 .dashboard-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
   align-items: start;
 }
 
@@ -348,7 +358,7 @@ h1, h2, h3, h4 { color: var(--text); font-weight: 600; }
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 1.5rem;
+  padding: 1.25rem;
   box-shadow: 0 2px 12px var(--shadow);
 }
 
@@ -356,7 +366,7 @@ h1, h2, h3, h4 { color: var(--text); font-weight: 600; }
   font-size: 1.1rem;
   font-weight: 600;
   color: var(--text);
-  margin-bottom: 1.25rem;
+  margin-bottom: 1rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -407,7 +417,7 @@ h1, h2, h3, h4 { color: var(--text); font-weight: 600; }
    Forms
    ===================================================== */
 .form-group {
-  margin-bottom: 1rem;
+  margin-bottom: 0.85rem;
 }
 
 .form-group label {
@@ -515,6 +525,106 @@ select.form-control {
 
 @media (max-width: 600px) {
   .form-row { grid-template-columns: 1fr; }
+}
+
+.log-section-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.log-section {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.log-section-label {
+  display: block;
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.log-section-content {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.log-section-content .form-group {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.log-section-content .form-group label {
+  display: block;
+  font-size: 0.75rem;
+  margin-bottom: 0.3rem;
+}
+
+.log-section-content .form-control {
+  padding: 0.5rem 0.6rem;
+  font-size: 0.9rem;
+}
+
+.log-section-content .btn {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.log-section .btn-full {
+  width: 100%;
+}
+
+.btn-full {
+  width: 100%;
+  justify-content: center;
+}
+
+.detail-summary {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.detail-item-label {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.detail-item-value {
+  color: var(--accent);
+  font-weight: 600;
+  margin-top: 0.2rem;
+}
+
+.detail-item-buttons {
+  display: flex;
+  gap: 0.3rem;
 }
 
 .form-hint {
