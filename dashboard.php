@@ -49,6 +49,7 @@ $role     = $_SESSION['role'] ?? 'user';
 
     <!-- Dashboard Tab -->
     <div id="dashboard-tab" class="tab-content active">
+    <div class="dashboard-grid">
 
     <!-- SECTION 1: Log Today (Entry Form) -->
     <div class="card">

@@ -339,16 +339,12 @@ h1, h2, h3, h4 { color: var(--text); font-weight: 600; }
   margin-top: 0.25rem;
 }
 
-/* Dashboard single-column floating layout */
+/* Dashboard floating layout – wraps to next line when column < 400px */
 .dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
   gap: 1rem;
   align-items: start;
-}
-
-@media (max-width: 900px) {
-  .dashboard-grid { grid-template-columns: 1fr; }
 }
 
 /* =====================================================
