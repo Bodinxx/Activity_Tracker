@@ -62,6 +62,11 @@ function generateId(): string {
     return uniqid('entry_', true);
 }
 
+function safePct(float $val, float $goal): int {
+    if ($goal <= 0) return 0;
+    return (int) min(round(($val / $goal) * 100), 999);
+}
+
 $logsFile = DATA_DIR . 'activity_logs.json';
 $method   = $_SERVER['REQUEST_METHOD'];
 
@@ -277,11 +282,6 @@ if ($method === 'POST') {
 
             $leaderboard = [];
 
-            function safePct(float $val, float $goal): int {
-                if ($goal <= 0) return 0;
-                return (int) min(round(($val / $goal) * 100), 999);
-            }
-
             foreach ($users as $username => $userData) {
                 // Collect this user's entries for the current week
                 $userEntries = array_filter($logs, function ($entry) use ($username, $weekStart, $weekEnd) {
@@ -350,9 +350,5 @@ if ($method === 'POST') {
     exit;
 }
 
-/* ── GET: leaderboard (also accepts POST for consistency) ── */
-
 http_response_code(405);
-echo json_encode(['error' => 'Method not allowed']);
-
 echo json_encode(['error' => 'Method not allowed']);

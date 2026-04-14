@@ -288,7 +288,11 @@
                     return;
                 }
                 tbody.innerHTML = rows.map(function (row, idx) {
-                    const medal = idx === 0 ? '\uD83E\uDD47' : idx === 1 ? '\uD83E\uDD48' : idx === 2 ? '\uD83E\uDD49' : (idx + 1);
+                    var medal;
+                    if (idx === 0)      medal = '\uD83E\uDD47';
+                    else if (idx === 1) medal = '\uD83E\uDD48';
+                    else if (idx === 2) medal = '\uD83E\uDD49';
+                    else                medal = idx + 1;
                     function pctCell(pct) {
                         const capped = Math.min(pct, 999);
                         const color = pct >= 100 ? 'var(--success,#4caf50)' : pct >= 50 ? 'var(--accent)' : 'var(--text-muted)';
