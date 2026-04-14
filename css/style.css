@@ -751,7 +751,7 @@ thead th {
   font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.6px;
-  padding: 0.4rem 0.5rem;
+  padding: 3px 4px;
   text-align: left;
   border-bottom: 1px solid var(--border);
 }
@@ -765,7 +765,7 @@ tbody tr:last-child { border-bottom: none; }
 tbody tr:hover { background: var(--surface2); }
 
 tbody td {
-  padding: 0.3rem 0.5rem;
+  padding: 2px 4px;
   color: var(--text);
   vertical-align: middle;
 }

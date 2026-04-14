@@ -255,7 +255,81 @@
         if (gLbl) gLbl.textContent = goalLbl;
     }
 
-    /* ── Render week table ── */
+    /* ── Motivational quote ── */
+    function loadMotivationalQuote() {
+        fetch('./data/quotes.json')
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+                const quotes = data.quotes || [];
+                if (!quotes.length) return;
+                const q = quotes[Math.floor(Math.random() * quotes.length)];
+                const el = document.getElementById('motivational-quote');
+                if (el) el.textContent = '\u201c' + q + '\u201d';
+            })
+            .catch(function () { /* silently skip on error */ });
+    }
+
+    /* ── Load leaderboard ── */
+    function loadLeaderboard() {
+        const tbody = document.getElementById('leaderboard-body');
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:.5rem">Loading\u2026</td></tr>';
+        }
+        return App.fetchJSON('./api/log.php', { action: 'get_leaderboard' })
+            .then(function (data) {
+                if (!tbody) return;
+                if (data.error) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">' + App.escapeHtml(data.error) + '</td></tr>';
+                    return;
+                }
+                const rows = data.leaderboard || [];
+                if (!rows.length) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">No data yet this week.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = rows.map(function (row, idx) {
+                    var medal;
+                    if (idx === 0)      medal = '\uD83E\uDD47';
+                    else if (idx === 1) medal = '\uD83E\uDD48';
+                    else if (idx === 2) medal = '\uD83E\uDD49';
+                    else                medal = idx + 1;
+                    function pctCell(pct) {
+                        const capped = Math.min(pct, 999);
+                        const color = pct >= 100 ? 'var(--success,#4caf50)' : pct >= 50 ? 'var(--accent)' : 'var(--text-muted)';
+                        return '<td style="color:' + color + ';font-weight:600">' + capped + '%</td>';
+                    }
+                    return '<tr>'
+                        + '<td style="text-align:center">' + medal + '</td>'
+                        + '<td>' + App.escapeHtml(row.username) + '</td>'
+                        + pctCell(row.points_pct)
+                        + pctCell(row.steps_pct)
+                        + pctCell(row.sleep_pct)
+                        + pctCell(row.meals_pct)
+                        + pctCell(row.water_pct)
+                        + '</tr>';
+                }).join('');
+            })
+            .catch(function () {
+                if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">Could not load leaderboard.</td></tr>';
+            });
+    }
+
+    /* ── Tab switching ── */
+    function initTabs() {
+        document.querySelectorAll('.tab-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                const targetId = btn.dataset.tab;
+                document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
+                document.querySelectorAll('.tab-content').forEach(function (c) { c.classList.remove('active'); });
+                btn.classList.add('active');
+                const target = document.getElementById(targetId);
+                if (target) target.classList.add('active');
+                if (targetId === 'leaderboard-tab') loadLeaderboard();
+            });
+        });
+    }
+
+
     function renderWeekTable() {
         const tbody = document.getElementById('week-table-body');
         if (!tbody) return;
@@ -264,7 +338,6 @@
         const weekDates = getWeekDates();
         const rows = weekDates.map(date => {
             const agg = weekData[date];
-            const activities = (agg.activities || []).map(a => a.name).join(', ');
             return `
         <tr>
           <td>${formatDate(date)}</td>
@@ -273,7 +346,6 @@
           <td>${agg.water || 0}</td>
           <td>${agg.meals || 0}</td>
           <td>${(agg.totalPoints || 0).toFixed(1)}</td>
-          <td>${activities || '—'}</td>
         </tr>`;
         });
 
@@ -455,6 +527,12 @@
             detailDate.max = today;
         }
 
+        // Init tab switching
+        initTabs();
+
+        // Load motivational quote
+        loadMotivationalQuote();
+
         // Load catalog, then week data
         App.initAuth({
             onLogin: function (data) {
@@ -583,6 +661,7 @@
     window.Dashboard = {
         init: init,
         loadWeekData: loadWeekData,
+        loadLeaderboard: loadLeaderboard,
         deleteEntry: deleteEntry,
         editEntry: editEntry,
         calculateActivityPoints: calculateActivityPoints,

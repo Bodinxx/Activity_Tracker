@@ -62,6 +62,11 @@ function generateId(): string {
     return uniqid('entry_', true);
 }
 
+function safePct(float $val, float $goal): int {
+    if ($goal <= 0) return 0;
+    return (int) min(round(($val / $goal) * 100), 999);
+}
+
 $logsFile = DATA_DIR . 'activity_logs.json';
 $method   = $_SERVER['REQUEST_METHOD'];
 
@@ -266,6 +271,78 @@ if ($method === 'POST') {
             break;
         }
 
+        case 'get_leaderboard': {
+            $usersFile  = DATA_DIR . 'users.json';
+            $users      = readJsonFile($usersFile);
+            $logs       = readJsonFile($logsFile);
+            $weekKey    = getIsoWeekKey();
+            $weekDates  = getWeekDates($weekKey);
+            $weekStart  = $weekDates[0];
+            $weekEnd    = $weekDates[6];
+
+            $leaderboard = [];
+
+            foreach ($users as $username => $userData) {
+                // Collect this user's entries for the current week
+                $userEntries = array_filter($logs, function ($entry) use ($username, $weekStart, $weekEnd) {
+                    $entryDate = substr($entry['timestamp'], 0, 10);
+                    return $entry['userId'] === $username
+                        && $entryDate >= $weekStart
+                        && $entryDate <= $weekEnd;
+                });
+
+                // Aggregate totals
+                $steps  = 0;
+                $water  = 0;
+                $sleep  = 0;
+                $meals  = 0;
+                $points = 0.0;
+
+                foreach ($userEntries as $entry) {
+                    switch ($entry['type']) {
+                        case 'steps':    $steps  += floatval($entry['quantity'] ?? 0); break;
+                        case 'water':    $water  += floatval($entry['quantity'] ?? 0); break;
+                        case 'sleep':    $sleep  += floatval($entry['quantity'] ?? 0); break;
+                        case 'meal':     $meals  += 1; break;
+                        case 'activity':
+                            $factor  = floatval($entry['factor'] ?? 0);
+                            $qty     = floatval($entry['quantity'] ?? 0);
+                            $points += $qty * $factor;
+                            break;
+                    }
+                }
+
+                // User goals / defaults
+                $goals         = $userData['goals'] ?? [];
+                $stepsGoalWeek = (floatval($goals['avg_steps'] ?? 6000)) * 7;
+                $sleepGoalWeek = (floatval($goals['sleep_goal'] ?? 7)) * 7;
+                $mealsGoal     = floatval($goals['clean_meals_goal'] ?? 14);
+                $waterGoal     = (floatval($goals['water_goal'] ?? 8)) * 7;
+                $pointsGoal    = floatval($goals['activity_points_goal'] ?? 300);
+                if ($pointsGoal <= 0) $pointsGoal = 300;
+
+                $leaderboard[] = [
+                    'username'   => $username,
+                    'points_pct' => safePct($points,     $pointsGoal),
+                    'steps_pct'  => safePct($steps,      $stepsGoalWeek),
+                    'sleep_pct'  => safePct($sleep,      $sleepGoalWeek),
+                    'meals_pct'  => safePct($meals,      $mealsGoal),
+                    'water_pct'  => safePct($water,      $waterGoal),
+                ];
+            }
+
+            // Sort by points percentage descending, then by username
+            usort($leaderboard, function ($a, $b) {
+                if ($b['points_pct'] !== $a['points_pct']) {
+                    return $b['points_pct'] - $a['points_pct'];
+                }
+                return strcmp($a['username'], $b['username']);
+            });
+
+            echo json_encode(['leaderboard' => $leaderboard]);
+            break;
+        }
+
         default:
             http_response_code(400);
             echo json_encode(['error' => 'Unknown action']);
@@ -274,6 +351,4 @@ if ($method === 'POST') {
 }
 
 http_response_code(405);
-echo json_encode(['error' => 'Method not allowed']);
-
 echo json_encode(['error' => 'Method not allowed']);
