@@ -219,7 +219,7 @@ $username = htmlspecialchars($_SESSION['user']);
 
   /* ── Load users ── */
   function loadUsers() {
-    App.fetchJSON('/api/admin.php', { action: 'list_users' }).then(function(data) {
+    App.fetchJSON('./api/admin.php', { action: 'list_users' }).then(function(data) {
       var tbody = document.getElementById('users-table-body');
       if (!data.users || data.users.length === 0) {
         tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:1.5rem">No users found</td></tr>';
@@ -245,7 +245,7 @@ $username = htmlspecialchars($_SESSION['user']);
           document.getElementById('reset-username-display').textContent = user;
           document.getElementById('temp-password-display').textContent = '…';
           openModal('reset-modal');
-          App.fetchJSON('/api/admin.php', { action: 'reset_password', username: user }).then(function(data) {
+          App.fetchJSON('./api/admin.php', { action: 'reset_password', username: user }).then(function(data) {
             if (data.success) {
               document.getElementById('temp-password-display').textContent = data.temp_password;
             } else {
@@ -268,7 +268,7 @@ $username = htmlspecialchars($_SESSION['user']);
 
   document.getElementById('confirm-remove-btn').addEventListener('click', function() {
     if (!userToRemove) return;
-    App.fetchJSON('/api/admin.php', { action: 'remove_user', username: userToRemove }).then(function(data) {
+    App.fetchJSON('./api/admin.php', { action: 'remove_user', username: userToRemove }).then(function(data) {
       closeModal('remove-modal');
       if (data.success) {
         App.showToast('User removed', 'success');
@@ -320,7 +320,7 @@ $username = htmlspecialchars($_SESSION['user']);
   }
 
   function loadActivities() {
-    App.fetchJSON('/api/admin.php', { action: 'get_activities' }).then(function(data) {
+    App.fetchJSON('./api/admin.php', { action: 'get_activities' }).then(function(data) {
       if (data.activities) renderActivities(data.activities);
     });
   }
@@ -331,7 +331,7 @@ $username = htmlspecialchars($_SESSION['user']);
 
   document.getElementById('confirm-remove-act-btn').addEventListener('click', function() {
     if (!actToRemove) return;
-    App.fetchJSON('/api/admin.php', { action: 'remove_activity', name: actToRemove }).then(function(data) {
+    App.fetchJSON('./api/admin.php', { action: 'remove_activity', name: actToRemove }).then(function(data) {
       closeModal('remove-act-modal');
       if (data.success) {
         App.showToast('Activity removed', 'success');
@@ -361,7 +361,7 @@ $username = htmlspecialchars($_SESSION['user']);
       return;
     }
 
-    App.fetchJSON('/api/admin.php', {
+    App.fetchJSON('./api/admin.php', {
       action: 'add_activity', name: name, unit: unit, factor: factor, category: category
     }).then(function(data) {
       if (data.success) {

@@ -105,7 +105,7 @@
 
             if (Date.now() - loginTime >= LOGOUT_TIMEOUT_MS) {
                 clearInterval(logoutTimerInterval);
-                fetchJSON('/api/auth.php', { action: 'logout' }).finally(function () {
+                fetchJSON('./api/auth.php', { action: 'logout' }).finally(function () {
                     try { localStorage.removeItem('apt_login_time'); } catch (_) {}
                     window.location.href = '/index.php?reason=timeout';
                 });
@@ -125,7 +125,7 @@
         try { storedTheme = localStorage.getItem('apt_theme'); } catch (_) {}
         if (storedTheme) applyTheme(storedTheme);
 
-        return fetchJSON('/api/auth.php', { action: 'check' }).then(function (data) {
+        return fetchJSON('./api/auth.php', { action: 'check' }).then(function (data) {
             if (data.logged_in) {
                 applyTheme(data.theme || 'dark');
                 try { localStorage.setItem('apt_theme', data.theme || 'dark'); } catch (_) {}

@@ -250,7 +250,7 @@ $role     = $_SESSION['role'] ?? 'user';
   document.getElementById('save-profile-btn').addEventListener('click', function() {
     var btn = this;
     btn.disabled = true;
-    App.fetchJSON('/api/user.php', {
+    App.fetchJSON('./api/user.php', {
       action:    'update_profile',
       full_name: document.getElementById('p-fullname').value.trim(),
       weight:    parseFloat(document.getElementById('p-weight').value) || 0,
@@ -271,7 +271,7 @@ $role     = $_SESSION['role'] ?? 'user';
   document.getElementById('save-goals-btn').addEventListener('click', function() {
     var btn = this;
     btn.disabled = true;
-    App.fetchJSON('/api/user.php', {
+    App.fetchJSON('./api/user.php', {
       action:            'update_goals',
       avg_steps:         parseFloat(document.getElementById('g-steps').value)   || 0,
       workout_hours:     parseFloat(document.getElementById('g-workout').value) || 0,
@@ -292,7 +292,7 @@ $role     = $_SESSION['role'] ?? 'user';
       var theme = this.value;
       App.applyTheme(theme);
       try { localStorage.setItem('apt_theme', theme); } catch(_) {}
-      App.fetchJSON('/api/user.php', { action: 'update_theme', theme: theme })
+      App.fetchJSON('./api/user.php', { action: 'update_theme', theme: theme })
         .then(function(data) {
           if (data.success) {
             showAlert('theme-success', 'Theme saved!', 'success');
@@ -313,7 +313,7 @@ $role     = $_SESSION['role'] ?? 'user';
     if (newPass !== confirm) { showAlert('pw-error', 'New passwords do not match.', 'error'); return; }
 
     btn.disabled = true;
-    App.fetchJSON('/api/user.php', {
+    App.fetchJSON('./api/user.php', {
       action:       'change_password',
       old_password: oldPass,
       new_password: newPass,

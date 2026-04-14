@@ -171,7 +171,7 @@
     statusEl.textContent = '…';
     statusEl.className = 'field-status checking';
     usernameTimer = setTimeout(function() {
-      App.fetchJSON('/api/auth.php', { action: 'check_username', username: val })
+      App.fetchJSON('./api/auth.php', { action: 'check_username', username: val })
         .then(function(data) {
           if (data.available) {
             statusEl.textContent = '✓ Available';
@@ -253,7 +253,7 @@
     loginBtn.disabled = true;
     loginBtn.textContent = 'Logging in…';
 
-    App.fetchJSON('/api/auth.php', { action: 'login', username: username, password: password })
+    App.fetchJSON('./api/auth.php', { action: 'login', username: username, password: password })
       .then(function(data) {
         if (data.success) {
           App.applyTheme(data.theme || 'dark');
@@ -300,7 +300,7 @@
     signupBtn.disabled = true;
     signupBtn.textContent = 'Creating account…';
 
-    App.fetchJSON('/api/auth.php', {
+    App.fetchJSON('./api/auth.php', {
       action:          'signup',
       username:        username,
       password:        password,

@@ -74,7 +74,7 @@
 
     /* ── Load activities catalog ── */
     function loadActivitiesCatalog() {
-        return App.fetchJSON('/api/admin.php', { action: 'get_activities' })
+        return App.fetchJSON('./api/admin.php', { action: 'get_activities' })
             .then(function (data) {
                 if (data.activities) {
                     activitiesCatalog = data.activities;
@@ -121,7 +121,7 @@
             weekLabel.innerHTML = 'Week <strong>' + isoInfo.week + '</strong>, ' + isoInfo.year;
         }
 
-        return App.fetchJSON('/api/log.php', { action: 'get_week' })
+        return App.fetchJSON('./api/log.php', { action: 'get_week' })
             .then(function (data) {
                 if (data.days) {
                     currentWeekDays = data.days;
@@ -270,7 +270,7 @@
 
     /* ── Save day ── */
     function saveDay(date, data) {
-        return App.fetchJSON('/api/log.php', Object.assign({ action: 'save_day', date: date }, data));
+        return App.fetchJSON('./api/log.php', Object.assign({ action: 'save_day', date: date }, data));
     }
 
     /* ── Init dashboard ── */
