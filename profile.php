@@ -53,12 +53,31 @@ $role     = $_SESSION['role'] ?? 'user';
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label for="p-weight">Weight (kg)</label>
-          <input type="number" id="p-weight" class="form-control" placeholder="e.g. 75" min="20" max="300" step="0.1">
+          <label for="p-weight">Weight</label>
+          <div style="display:flex;gap:.5rem">
+            <input type="number" id="p-weight" class="form-control" placeholder="e.g. 75" min="20" max="500" step="0.1">
+            <select id="p-weight-unit" class="form-control" style="flex:0 0 70px">
+              <option value="kg">kg</option>
+              <option value="lbs">lbs</option>
+            </select>
+          </div>
         </div>
         <div class="form-group">
-          <label for="p-height">Height (cm)</label>
-          <input type="number" id="p-height" class="form-control" placeholder="e.g. 175" min="100" max="250">
+          <label for="p-height">Height</label>
+          <div id="height-input-cm" style="display:flex;gap:.5rem">
+            <input type="number" id="p-height" class="form-control" placeholder="e.g. 175" min="100" max="250">
+            <select id="p-height-unit" class="form-control" style="flex:0 0 70px">
+              <option value="cm">cm</option>
+              <option value="ft">ft/in</option>
+            </select>
+          </div>
+          <div id="height-input-ft" style="display:none;gap:.5rem">
+            <input type="number" id="p-height-ft" class="form-control" placeholder="Feet" min="3" max="8" step="1" style="flex:0 0 60px">
+            <input type="number" id="p-height-in" class="form-control" placeholder="Inches" min="0" max="11" step="1" style="flex:0 0 70px">
+            <select class="form-control" style="flex:0 0 70px;pointer-events:none;background:#555;color:#aaa">
+              <option>ft/in</option>
+            </select>
+          </div>
         </div>
       </div>
       <div class="form-row">
@@ -119,7 +138,9 @@ $role     = $_SESSION['role'] ?? 'user';
           <input type="number" id="g-sleep" class="form-control" placeholder="e.g. 7" min="0" max="24" step="0.5">
         </div>
         <div class="form-group">
-          <label for="g-meals">Clean Meals/Week</label>
+          <label for="g-meals">Clean Meals/Week
+            <span class="tooltip-icon" title="A clean meal is whole foods with nutritional value, under the kcal/meal threshold shown in BMR section. Examples: grilled chicken with vegetables, salads with lean protein, whole grain bowls.">?</span>
+          </label>
           <input type="number" id="g-meals" class="form-control" placeholder="e.g. 14" min="0">
         </div>
       </div>
@@ -206,9 +227,66 @@ $role     = $_SESSION['role'] ?? 'user';
     document.getElementById('bmr-active').textContent      = Math.round(bmr * 1.55).toLocaleString() + ' kcal';
   }
 
-  ['p-weight','p-height','p-age','p-gender'].forEach(function(id) {
-    document.getElementById(id).addEventListener('input', updateBMR);
-    document.getElementById(id).addEventListener('change', updateBMR);
+  // Unit conversion functions
+  function getWeightInKg() {
+    var val = parseFloat(document.getElementById('p-weight').value) || 0;
+    var unit = document.getElementById('p-weight-unit').value;
+    if (unit === 'lbs') {
+      return val / 2.20462; // Convert lbs to kg
+    }
+    return val; // Already in kg
+  }
+
+  function getHeightInCm() {
+    var unit = document.getElementById('p-height-unit').value;
+    if (unit === 'ft') {
+      var ft = parseFloat(document.getElementById('p-height-ft').value) || 0;
+      var in_ = parseFloat(document.getElementById('p-height-in').value) || 0;
+      return (ft * 30.48) + (in_ * 2.54); // Convert ft/in to cm
+    }
+    return parseFloat(document.getElementById('p-height').value) || 0; // Already in cm
+  }
+
+  // Handle height unit change
+  document.getElementById('p-height-unit').addEventListener('change', function() {
+    var cmDiv = document.getElementById('height-input-cm');
+    var ftDiv = document.getElementById('height-input-ft');
+    if (this.value === 'ft') {
+      var cm = parseFloat(document.getElementById('p-height').value) || 0;
+      var ft = Math.floor(cm / 30.48);
+      var inches = Math.round(((cm / 30.48) - ft) * 12);
+      document.getElementById('p-height-ft').value = ft;
+      document.getElementById('p-height-in').value = inches;
+      cmDiv.style.display = 'none';
+      ftDiv.style.display = 'flex';
+    } else {
+      var ft = parseFloat(document.getElementById('p-height-ft').value) || 0;
+      var in_ = parseFloat(document.getElementById('p-height-in').value) || 0;
+      var cm = (ft * 30.48) + (in_ * 2.54);
+      document.getElementById('p-height').value = Math.round(cm * 10) / 10;
+      cmDiv.style.display = 'flex';
+      ftDiv.style.display = 'none';
+    }
+    updateBMR();
+  });
+
+  // Handle weight unit change
+  document.getElementById('p-weight-unit').addEventListener('change', function() {
+    var val = parseFloat(document.getElementById('p-weight').value) || 0;
+    if (this.value === 'lbs') {
+      document.getElementById('p-weight').value = Math.round(val * 2.20462 * 10) / 10;
+    } else {
+      document.getElementById('p-weight').value = Math.round(val / 2.20462 * 10) / 10;
+    }
+    updateBMR();
+  });
+
+  ['p-weight','p-height','p-age','p-gender','p-height-ft','p-height-in'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('input', updateBMR);
+      el.addEventListener('change', updateBMR);
+    }
   });
 
   function showAlert(id, msg, type) {
@@ -232,6 +310,10 @@ $role     = $_SESSION['role'] ?? 'user';
       document.getElementById('p-age').value      = profile.age       || '';
       if (profile.gender) document.getElementById('p-gender').value = profile.gender;
 
+      // Set units to kg and cm by default
+      document.getElementById('p-weight-unit').value = 'kg';
+      document.getElementById('p-height-unit').value = 'cm';
+
       document.getElementById('g-steps').value   = goals.avg_steps        || '';
       document.getElementById('g-workout').value = goals.workout_hours     || '';
       document.getElementById('g-sleep').value   = goals.sleep_goal        || '';
@@ -253,8 +335,8 @@ $role     = $_SESSION['role'] ?? 'user';
     App.fetchJSON('./api/user.php', {
       action:    'update_profile',
       full_name: document.getElementById('p-fullname').value.trim(),
-      weight:    parseFloat(document.getElementById('p-weight').value) || 0,
-      height:    parseFloat(document.getElementById('p-height').value) || 0,
+      weight:    Math.round(getWeightInKg() * 100) / 100,
+      height:    Math.round(getHeightInCm() * 10) / 10,
       age:       parseInt(document.getElementById('p-age').value, 10) || 0,
       gender:    document.getElementById('p-gender').value,
     }).then(function(data) {
