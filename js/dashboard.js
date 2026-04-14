@@ -326,6 +326,26 @@
             });
         }
 
+        const waterIncBtn = document.getElementById('water-inc-btn');
+        if (waterIncBtn) {
+            waterIncBtn.addEventListener('click', function () {
+                const input = document.getElementById('log-water');
+                if (!input) return;
+                const current = parseFloat(input.value) || 0;
+                input.value = ((current + 1).toFixed(1)).replace(/\.0$/, '');
+            });
+        }
+
+        const mealsIncBtn = document.getElementById('meals-inc-btn');
+        if (mealsIncBtn) {
+            mealsIncBtn.addEventListener('click', function () {
+                const input = document.getElementById('log-meals');
+                if (!input) return;
+                const current = parseInt(input.value || '0', 10) || 0;
+                input.value = current + 1;
+            });
+        }
+
         // Save day form
         const saveDayBtn = document.getElementById('save-day-btn');
         if (saveDayBtn) {

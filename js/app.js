@@ -107,7 +107,7 @@
                 clearInterval(logoutTimerInterval);
                 fetchJSON('./api/auth.php', { action: 'logout' }).finally(function () {
                     try { localStorage.removeItem('apt_login_time'); } catch (_) {}
-                    window.location.href = '/index.php?reason=timeout';
+                    window.location.href = './index.php?reason=timeout';
                 });
             }
         }, 60000); // check every minute
@@ -116,7 +116,7 @@
     /* ── Auth init ── */
     function initAuth(options) {
         options = options || {};
-        const publicPages = ['index.php', '/index.php', ''];
+        const publicPages = ['index.php', ''];
         const currentPage = window.location.pathname.split('/').pop() || 'index.php';
         const isPublic    = publicPages.indexOf(currentPage) !== -1;
 
@@ -147,15 +147,29 @@
                 if (options.onLogin) options.onLogin(data);
             } else {
                 if (!isPublic) {
-                    window.location.href = '/index.php';
+                    window.location.href = './index.php';
                 }
                 if (options.onNotLoggedIn) options.onNotLoggedIn();
             }
             return data;
         }).catch(function () {
-            if (!isPublic) window.location.href = '/index.php';
+            if (!isPublic) window.location.href = './index.php';
         });
     }
+
+    /* ── Navbar toggle init ── */
+    function initNavbarToggle() {
+        var toggle = document.getElementById('navbar-toggle');
+        if (!toggle) return;
+        toggle.addEventListener('click', function () {
+            var nav = this.closest('.navbar');
+            if (!nav) return;
+            nav.classList.toggle('expanded');
+            this.setAttribute('aria-expanded', nav.classList.contains('expanded') ? 'true' : 'false');
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', initNavbarToggle);
 
     /* ── Expose ── */
     window.App = {

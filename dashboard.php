@@ -20,6 +20,7 @@ $role     = $_SESSION['role'] ?? 'user';
 <!-- Navbar -->
 <nav class="navbar">
   <span class="navbar-brand">🏃 Activity Tracker</span>
+  <button class="navbar-toggle" id="navbar-toggle" aria-expanded="false" aria-label="Toggle menu">☰</button>
   <ul class="navbar-nav">
     <li><a href="dashboard.php" class="active">Dashboard</a></li>
     <li><a href="profile.php">Profile</a></li>
@@ -57,7 +58,10 @@ $role     = $_SESSION['role'] ?? 'user';
         </div>
         <div class="form-group">
           <label for="log-water">Water (glasses)</label>
-          <input type="number" id="log-water" class="form-control" placeholder="e.g. 8" min="0" step="0.5">
+          <div class="input-with-button">
+            <input type="number" id="log-water" class="form-control" placeholder="e.g. 8" min="0" step="0.5">
+            <button type="button" class="btn btn-secondary btn-sm" id="water-inc-btn">+1</button>
+          </div>
         </div>
       </div>
 
@@ -67,8 +71,11 @@ $role     = $_SESSION['role'] ?? 'user';
           <input type="number" id="log-sleep" class="form-control" placeholder="e.g. 7.5" min="0" max="24" step="0.5">
         </div>
         <div class="form-group">
-          <label for="log-meals">Clean Meals</label>
-          <input type="number" id="log-meals" class="form-control" placeholder="e.g. 3" min="0" max="10">
+          <label for="log-meals">Clean Meals <span class="tooltip-icon" title="A clean meal is whole foods with nutritional value, under the kcal/meal threshold shown in the profile BMR section. Examples: grilled chicken with vegetables, salads with lean protein, whole grain bowls.">?</span></label>
+          <div class="input-with-button">
+            <input type="number" id="log-meals" class="form-control" placeholder="e.g. 3" min="0" max="10">
+            <button type="button" class="btn btn-secondary btn-sm" id="meals-inc-btn">+1</button>
+          </div>
         </div>
       </div>
 

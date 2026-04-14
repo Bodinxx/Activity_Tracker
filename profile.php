@@ -20,6 +20,7 @@ $role     = $_SESSION['role'] ?? 'user';
 <!-- Navbar -->
 <nav class="navbar">
   <span class="navbar-brand">🏃 Activity Tracker</span>
+  <button class="navbar-toggle" id="navbar-toggle" aria-expanded="false" aria-label="Toggle menu">☰</button>
   <ul class="navbar-nav">
     <li><a href="dashboard.php">Dashboard</a></li>
     <li><a href="profile.php" class="active">Profile</a></li>

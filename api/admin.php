@@ -4,6 +4,10 @@ header('Content-Type: application/json');
 
 define('DATA_DIR', __DIR__ . '/../data/');
 
+$raw    = file_get_contents('php://input');
+$input  = json_decode($raw, true) ?? [];
+$action = $input['action'] ?? ($_GET['action'] ?? '');
+
 /* ── Auth + admin guard ── */
 if (empty($_SESSION['user'])) {
     http_response_code(401);
@@ -11,7 +15,7 @@ if (empty($_SESSION['user'])) {
     exit;
 }
 
-if (($_SESSION['role'] ?? 'user') !== 'admin') {
+if ($action !== 'get_activities' && (($_SESSION['role'] ?? 'user') !== 'admin')) {
     http_response_code(403);
     echo json_encode(['error' => 'Admin access required']);
     exit;
@@ -43,10 +47,6 @@ function writeJsonFile(string $path, array $data): bool {
     fclose($fp);
     return true;
 }
-
-$raw    = file_get_contents('php://input');
-$input  = json_decode($raw, true) ?? [];
-$action = $input['action'] ?? ($_GET['action'] ?? '');
 
 $usersFile      = DATA_DIR . 'users.json';
 $activitiesFile = DATA_DIR . 'activities.json';
