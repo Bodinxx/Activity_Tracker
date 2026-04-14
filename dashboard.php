@@ -40,7 +40,15 @@ $role     = $_SESSION['role'] ?? 'user';
     <p>Log your daily activities and track weekly progress</p>
   </div>
 
-  <div class="dashboard-grid">
+    <!-- Main Dashboard Tabs -->
+  <div class="dashboard-tabs">
+    <div class="tab-nav">
+      <button class="tab-btn active" data-tab="dashboard-tab">📊 Dashboard</button>
+      <button class="tab-btn" data-tab="leaderboard-tab">🏆 Leaderboard</button>
+    </div>
+
+    <!-- Dashboard Tab -->
+    <div id="dashboard-tab" class="tab-content active">
 
     <!-- SECTION 1: Log Today (Entry Form) -->
     <div class="card">
@@ -118,10 +126,6 @@ $role     = $_SESSION['role'] ?? 'user';
             <label for="activity-qty">Quantity</label>
             <input type="number" id="activity-qty" class="form-control" placeholder="Qty" min="0.1" step="0.1">
           </div>
-          <div class="form-group">
-            <label for="activity-unit">Unit</label>
-            <input type="text" id="activity-unit" class="form-control" placeholder="Unit" disabled>
-          </div>
         </div>
         <button type="button" class="btn btn-secondary btn-full" id="activity-add-btn">Log Activity</button>
       </div>
@@ -138,6 +142,10 @@ $role     = $_SESSION['role'] ?? 'user';
         <div class="card-title" style="margin-bottom:0"><span class="icon">📅</span> <span id="week-label">Week 15, 2026</span></div>
       </div>
 
+      <div id="motivational-quote" class="motivational-quote" style="background:var(--surface2);border-left:4px solid var(--accent);padding:.75rem;border-radius:6px;margin-bottom:1rem;font-style:italic;color:var(--text-muted);font-size:.95rem;line-height:1.5;">
+        Loading inspiration...
+      </div>
+
       <div class="points-total">
         <div class="points-number" id="total-points">0.0</div>
         <div class="points-label">Activity Points This Week</div>
@@ -152,6 +160,14 @@ $role     = $_SESSION['role'] ?? 'user';
         <div class="progress-bar-track">
           <div class="progress-bar-fill" style="width:0%"></div>
         </div>
+      </div>
+
+      <div class="form-row" style="align-items:flex-end;gap:.75rem;margin-top:.85rem;">
+        <div class="form-group" style="margin-bottom:0;">
+          <label for="activity-points-goal">Weekly Activity Points Goal</label>
+          <input type="number" id="activity-points-goal" class="form-control" placeholder="e.g. 300" min="0" step="1">
+        </div>
+        <button type="button" class="btn btn-secondary" id="save-activity-goal-btn">Save Goal</button>
       </div>
 
       <div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">
@@ -204,11 +220,10 @@ $role     = $_SESSION['role'] ?? 'user';
               <th>Water</th>
               <th>Meals</th>
               <th>Points</th>
-              <th>Activities</th>
             </tr>
           </thead>
           <tbody id="week-table-body">
-            <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:1.5rem">Loading…</td></tr>
+            <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:.5rem">Loading…</td></tr>
           </tbody>
         </table>
       </div>
@@ -228,8 +243,37 @@ $role     = $_SESSION['role'] ?? 'user';
       </div>
     </div>
 
-  </div>
-</div>
+    </div><!-- /dashboard-grid -->
+    </div><!-- /dashboard-tab -->
+
+    <!-- Leaderboard Tab -->
+    <div id="leaderboard-tab" class="tab-content">
+      <div class="dashboard-grid">
+        <div class="card">
+          <div class="card-title"><span class="icon">🏆</span> Weekly Leaderboard</div>
+          <div class="table-wrapper">
+            <table class="leaderboard-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>User</th>
+                  <th>Points</th>
+                  <th>Steps</th>
+                  <th>Sleep</th>
+                  <th>Meals</th>
+                  <th>Water</th>
+                </tr>
+              </thead>
+              <tbody id="leaderboard-body">
+                <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:.5rem">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div><!-- /dashboard-grid -->
+    </div><!-- /leaderboard-tab -->
+
+  </div><!-- /dashboard-tabs -->
 
 <div id="toast-container"></div>
 <script src="js/app.js"></script>

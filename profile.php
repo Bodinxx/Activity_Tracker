@@ -145,6 +145,15 @@ $role     = $_SESSION['role'] ?? 'user';
           <input type="number" id="g-meals" class="form-control" placeholder="e.g. 14" min="0">
         </div>
       </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="g-activity">Weekly Activity Points Goal</label>
+          <input type="number" id="g-activity" class="form-control" placeholder="e.g. 300" min="0" step="1">
+        </div>
+        <div class="form-group" style="align-self:flex-end;margin-bottom:0;">
+          <p class="form-hint" style="margin:0;font-size:.85rem;color:var(--text-muted)">This target is used to measure your activity points progress.</p>
+        </div>
+      </div>
       <button class="btn btn-primary" id="save-goals-btn">Save Goals</button>
     </div>
 
@@ -315,10 +324,11 @@ $role     = $_SESSION['role'] ?? 'user';
       document.getElementById('p-weight-unit').value = 'kg';
       document.getElementById('p-height-unit').value = 'cm';
 
-      document.getElementById('g-steps').value   = goals.avg_steps        || '';
-      document.getElementById('g-workout').value = goals.workout_hours     || '';
-      document.getElementById('g-sleep').value   = goals.sleep_goal        || '';
-      document.getElementById('g-meals').value   = goals.clean_meals_goal  || '';
+      document.getElementById('g-steps').value   = goals.avg_steps            || '';
+      document.getElementById('g-workout').value = goals.workout_hours       || '';
+      document.getElementById('g-sleep').value   = goals.sleep_goal          || '';
+      document.getElementById('g-meals').value   = goals.clean_meals_goal    || '';
+      document.getElementById('g-activity').value= goals.activity_points_goal || '';
 
       // Set theme radio
       var currentTheme = data.theme || 'dark';
@@ -356,10 +366,11 @@ $role     = $_SESSION['role'] ?? 'user';
     btn.disabled = true;
     App.fetchJSON('./api/user.php', {
       action:            'update_goals',
-      avg_steps:         parseFloat(document.getElementById('g-steps').value)   || 0,
-      workout_hours:     parseFloat(document.getElementById('g-workout').value) || 0,
-      sleep_goal:        parseFloat(document.getElementById('g-sleep').value)   || 0,
-      clean_meals_goal:  parseFloat(document.getElementById('g-meals').value)   || 0,
+      avg_steps:         parseFloat(document.getElementById('g-steps').value)     || 0,
+      workout_hours:     parseFloat(document.getElementById('g-workout').value)   || 0,
+      sleep_goal:        parseFloat(document.getElementById('g-sleep').value)     || 0,
+      clean_meals_goal:  parseFloat(document.getElementById('g-meals').value)     || 0,
+      activity_points_goal: parseFloat(document.getElementById('g-activity').value) || 0,
     }).then(function(data) {
       if (data.success) {
         showAlert('goals-success', 'Goals saved!', 'success');

@@ -39,11 +39,10 @@
     /* ── Points calculation ── */
     function calculateActivityPoints(activity) {
         if (!activity || activity.type !== 'activity') return 0;
-        const catalog = activitiesCatalog[activity.name];
-        if (catalog) {
-            return (parseFloat(activity.quantity) || 0) * catalog.factor;
-        }
-        return 0;
+        const storedFactor = parseFloat(activity.factor) || 0;
+        const catalogFactor = activitiesCatalog[activity.name]?.factor || 0;
+        const factor = storedFactor || catalogFactor;
+        return (parseFloat(activity.quantity) || 0) * factor;
     }
 
     /* ── ISO week + date helpers ── */
@@ -76,7 +75,10 @@
     }
 
     function formatTime(timestamp) {
-        const date = new Date(timestamp + 'Z');
+        const date = new Date(timestamp);
+        if (isNaN(date.getTime())) {
+            return timestamp;
+        }
         return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
     }
 
@@ -226,9 +228,9 @@
 
         // Activity points
         const totalPoints = Object.values(weekData).reduce((s, d) => s + (d.totalPoints || 0), 0);
-        const workoutHoursGoal = parseFloat(goals.workout_hours) || 5;
-        const pct = workoutHoursGoal > 0
-            ? Math.min(Math.round((totalPoints / (workoutHoursGoal * 60)) * 100), 999)
+        const activityGoal = parseFloat(goals.activity_points_goal) || (parseFloat(goals.workout_hours) || 5) * 60;
+        const pct = activityGoal > 0
+            ? Math.min(Math.round((totalPoints / activityGoal) * 100), 999)
             : 0;
 
         const ptsEl = document.getElementById('total-points');
@@ -236,8 +238,8 @@
         if (ptsEl) ptsEl.textContent = totalPoints.toFixed(1);
         if (pctEl) pctEl.textContent = pct + '% of target';
 
-        setProgressBar('progress-points', totalPoints, workoutHoursGoal * 60,
-            totalPoints.toFixed(1) + ' pts', Math.round(workoutHoursGoal * 60) + ' target');
+        setProgressBar('progress-points', totalPoints, activityGoal,
+            totalPoints.toFixed(1) + ' pts', Math.round(activityGoal) + ' target');
     }
 
     function setProgressBar(id, value, goal, valueLbl, goalLbl) {
@@ -317,7 +319,7 @@
     }
 
     /* ── Add entry ── */
-    function addEntry(timestamp, type, quantity, unit, note) {
+    function addEntry(timestamp, type, quantity, unit, note, name, factor) {
         const entryData = {
             action: 'add_entry',
             timestamp: timestamp,
@@ -326,6 +328,12 @@
             unit: unit,
             note: note,
         };
+        
+        // Include activity name and factor for activity entries
+        if (type === 'activity' && name) {
+            entryData.name = name;
+            entryData.factor = factor;
+        }
 
         return App.fetchJSON('./api/log.php', entryData)
             .then(function (resp) {
@@ -352,14 +360,14 @@
         return document.getElementById('entry-note')?.value || '';
     }
 
-    function logTypedEntry(type, quantity, unit) {
+    function logTypedEntry(type, quantity, unit, name, factor) {
         if (!quantity || quantity <= 0) {
             App.showToast('Please enter a valid quantity', 'warning');
             return Promise.resolve();
         }
         const timestamp = getCurrentTimestamp();
         const note = getSharedNote();
-        return addEntry(timestamp, type, quantity, unit, note)
+        return addEntry(timestamp, type, quantity, unit, note, name, factor)
             .then(function () {
                 const detailDate = document.getElementById('detail-date');
                 if (detailDate) renderDetailSummary(detailDate.value);
@@ -452,6 +460,10 @@
             onLogin: function (data) {
                 userGoals = data.goals || {};
                 userProfile = data.profile || {};
+                const activityGoalInput = document.getElementById('activity-points-goal');
+                if (activityGoalInput) {
+                    activityGoalInput.value = userGoals.activity_points_goal || '';
+                }
                 loadActivitiesCatalog().then(function () {
                     loadWeekData().then(function () {
                         if (detailDate) renderDetailSummary(detailDate.value);
@@ -529,7 +541,33 @@
                     return;
                 }
                 const catalog = activitiesCatalog[activityName];
-                logTypedEntry('activity', quantity, catalog?.unit || '');
+                logTypedEntry('activity', quantity, catalog?.unit || '', activityName, catalog?.factor || 0);
+            });
+        }
+
+        const saveActivityGoalBtn = document.getElementById('save-activity-goal-btn');
+        if (saveActivityGoalBtn) {
+            saveActivityGoalBtn.addEventListener('click', function () {
+                const btn = this;
+                const goalInput = document.getElementById('activity-points-goal');
+                const goalValue = parseFloat(goalInput?.value || 0);
+                btn.disabled = true;
+                App.fetchJSON('./api/user.php', {
+                    action: 'update_goals',
+                    activity_points_goal: goalValue,
+                }).then(function (data) {
+                    if (data.success) {
+                        userGoals.activity_points_goal = goalValue;
+                        App.showToast('Activity points goal saved!', 'success');
+                        updateProgressBars();
+                    } else {
+                        App.showToast(data.error || 'Failed to save activity goal', 'error');
+                    }
+                }).catch(function () {
+                    App.showToast('Network error saving activity goal', 'error');
+                }).finally(function () {
+                    btn.disabled = false;
+                });
             });
         }
 

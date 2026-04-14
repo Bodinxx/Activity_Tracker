@@ -154,10 +154,11 @@ switch ($action) {
             'theme'         => 'dark',
             'role'          => empty($users) ? 'admin' : 'user', // first user becomes admin
             'goals' => [
-                'avg_steps'        => 6000,
-                'workout_hours'    => 5,
-                'sleep_goal'       => 7,
-                'clean_meals_goal' => 14,
+                'avg_steps'            => 6000,
+                'workout_hours'        => 5,
+                'sleep_goal'           => 7,
+                'clean_meals_goal'     => 14,
+                'activity_points_goal' => 300,
             ],
             'profile' => $profile,
         ];

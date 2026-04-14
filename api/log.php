@@ -79,6 +79,8 @@ if ($method === 'POST') {
             $quantity  = floatval($input['quantity'] ?? 0);
             $unit      = trim($input['unit'] ?? '');
             $note      = trim($input['note'] ?? '');
+            $name      = trim($input['name'] ?? '');
+            $factor    = floatval($input['factor'] ?? 0);
 
             if (!$timestamp || !$type) {
                 http_response_code(400);
@@ -107,6 +109,12 @@ if ($method === 'POST') {
                 'unit'      => $unit,
                 'note'      => $note,
             ];
+            
+            // Store activity name and factor for activity entries
+            if ($type === 'activity' && $name) {
+                $entry['name'] = $name;
+                $entry['factor'] = $factor;
+            }
 
             $logs = readJsonFile($logsFile);
             $logs[] = $entry;

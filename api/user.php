@@ -98,7 +98,7 @@ switch ($action) {
             exit;
         }
 
-        $allowed = ['avg_steps','workout_hours','sleep_goal','clean_meals_goal'];
+        $allowed = ['avg_steps','workout_hours','sleep_goal','clean_meals_goal','activity_points_goal'];
         foreach ($allowed as $field) {
             if (isset($input[$field])) {
                 $users[$sessionUser]['goals'][$field] = floatval($input[$field]);
