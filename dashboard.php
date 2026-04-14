@@ -251,17 +251,18 @@ $role     = $_SESSION['role'] ?? 'user';
       <div class="dashboard-grid">
         <div class="card">
           <div class="card-title"><span class="icon">🏆</span> Weekly Leaderboard</div>
+          <p style="color:var(--text-muted);font-size:.85rem;margin-bottom:.75rem">Shows each user's progress as a percentage of their personal weekly targets.</p>
           <div class="table-wrapper">
             <table class="leaderboard-table">
               <thead>
                 <tr>
                   <th>#</th>
                   <th>User</th>
-                  <th>Points</th>
-                  <th>Steps</th>
-                  <th>Sleep</th>
-                  <th>Meals</th>
-                  <th>Water</th>
+                  <th>Points %</th>
+                  <th>Steps %</th>
+                  <th>Sleep %</th>
+                  <th>Meals %</th>
+                  <th>Water %</th>
                 </tr>
               </thead>
               <tbody id="leaderboard-body">
