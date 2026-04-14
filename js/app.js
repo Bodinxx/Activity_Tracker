@@ -75,7 +75,16 @@
             credentials: 'same-origin',
         };
         return fetch(url, opts).then(function (res) {
-            return res.json().then(function (json) {
+            return res.text().then(function (text) {
+                var json;
+                try {
+                    json = JSON.parse(text);
+                } catch (e) {
+                    // Server returned non-JSON (e.g. a PHP warning prepended to output).
+                    // Surface a structured error so callers see a friendly message
+                    // rather than triggering the generic "Network error" catch path.
+                    json = { error: 'Unexpected server response' };
+                }
                 json._status = res.status;
                 return json;
             });

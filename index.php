@@ -54,7 +54,10 @@
       <div class="form-row">
         <div class="form-group">
           <label for="signup-username">Username</label>
-          <input type="text" id="signup-username" class="form-control" placeholder="Choose a username" autocomplete="username">
+          <div class="input-validate-wrap">
+            <input type="text" id="signup-username" class="form-control" placeholder="Choose a username" autocomplete="username">
+            <span class="field-status" id="username-status" aria-live="polite"></span>
+          </div>
         </div>
         <div class="form-group">
           <label for="signup-fullname">Full Name</label>
@@ -66,10 +69,17 @@
         <div class="form-group">
           <label for="signup-password">Password</label>
           <input type="password" id="signup-password" class="form-control" placeholder="Min 6 characters" autocomplete="new-password">
+          <div class="pw-strength-bar" id="pw-strength-bar" aria-hidden="true">
+            <div class="pw-strength-fill" id="pw-strength-fill"></div>
+          </div>
+          <span class="pw-strength-label" id="pw-strength-label"></span>
         </div>
         <div class="form-group">
           <label for="signup-confirm">Confirm Password</label>
-          <input type="password" id="signup-confirm" class="form-control" placeholder="Repeat password" autocomplete="new-password">
+          <div class="input-validate-wrap">
+            <input type="password" id="signup-confirm" class="form-control" placeholder="Repeat password" autocomplete="new-password">
+            <span class="field-status" id="confirm-status" aria-live="polite"></span>
+          </div>
         </div>
       </div>
 
@@ -89,11 +99,12 @@
 
       <!-- Captcha -->
       <div class="captcha-box">
-        <p class="captcha-question" id="captcha-question">Loading…</p>
+        <img id="captcha-img" src="captcha.php" alt="Captcha image – solve the math equation shown" class="captcha-img">
+        <button type="button" class="btn btn-secondary btn-sm captcha-refresh" id="captcha-refresh" title="Refresh captcha">↻ New</button>
       </div>
       <div class="form-group">
-        <label for="captcha-answer">Your Answer</label>
-        <input type="number" id="captcha-answer" class="form-control" placeholder="Enter the answer">
+        <label for="captcha-answer">Answer</label>
+        <input type="number" id="captcha-answer" class="form-control" placeholder="Enter the answer from the image">
       </div>
 
       <button class="btn btn-primary btn-full mt-2" id="signup-btn">Create Account</button>
@@ -137,17 +148,87 @@
   document.getElementById('go-signup').addEventListener('click', function(e) { e.preventDefault(); switchTab('signup'); });
   document.getElementById('go-login').addEventListener('click',  function(e) { e.preventDefault(); switchTab('login'); });
 
-  // Captcha
+  // Captcha – image based
   function loadCaptcha() {
-    fetch('captcha.php', { credentials: 'same-origin' })
-      .then(function(r) { return r.json(); })
-      .then(function(d) {
-        document.getElementById('captcha-question').textContent = d.question || 'Error loading captcha';
-      })
-      .catch(function() {
-        document.getElementById('captcha-question').textContent = 'Could not load captcha';
-      });
+    var img = document.getElementById('captcha-img');
+    // Cache-bust so the browser fetches a fresh captcha (new session value)
+    img.src = 'captcha.php?t=' + Date.now();
+    document.getElementById('captcha-answer').value = '';
   }
+  document.getElementById('captcha-refresh').addEventListener('click', loadCaptcha);
+
+  // ── Username uniqueness check (debounced) ──────────────────────────
+  var usernameTimer = null;
+  document.getElementById('signup-username').addEventListener('input', function() {
+    var statusEl = document.getElementById('username-status');
+    var val = this.value.trim();
+    clearTimeout(usernameTimer);
+    if (val.length < 3) {
+      statusEl.textContent = '';
+      statusEl.className = 'field-status';
+      return;
+    }
+    statusEl.textContent = '…';
+    statusEl.className = 'field-status checking';
+    usernameTimer = setTimeout(function() {
+      App.fetchJSON('/api/auth.php', { action: 'check_username', username: val })
+        .then(function(data) {
+          if (data.available) {
+            statusEl.textContent = '✓ Available';
+            statusEl.className = 'field-status ok';
+          } else {
+            statusEl.textContent = '✗ Already taken';
+            statusEl.className = 'field-status err';
+          }
+        })
+        .catch(function() { statusEl.textContent = ''; statusEl.className = 'field-status'; });
+    }, 500);
+  });
+
+  // ── Password strength meter ────────────────────────────────────────
+  function scorePassword(pw) {
+    if (!pw) return { score: 0, label: '' };
+    var score = 0;
+    if (pw.length >= 6)  score++;
+    if (pw.length >= 10) score++;
+    if (/[A-Z]/.test(pw)) score++;
+    if (/[0-9]/.test(pw)) score++;
+    if (/[^A-Za-z0-9]/.test(pw)) score++;
+    var labels = ['', 'Weak', 'Fair', 'Good', 'Strong', 'Very Strong'];
+    return { score: score, label: labels[score] || 'Very Strong' };
+  }
+
+  document.getElementById('signup-password').addEventListener('input', function() {
+    var fill  = document.getElementById('pw-strength-fill');
+    var label = document.getElementById('pw-strength-label');
+    var res   = scorePassword(this.value);
+    var pct   = Math.round((res.score / 5) * 100);
+    fill.style.width = pct + '%';
+    fill.className = 'pw-strength-fill';
+    if (res.score <= 1) fill.classList.add('pw-weak');
+    else if (res.score === 2) fill.classList.add('pw-fair');
+    else if (res.score === 3) fill.classList.add('pw-good');
+    else fill.classList.add('pw-strong');
+    label.textContent = res.label;
+    label.className   = 'pw-strength-label ' + fill.className.replace('pw-strength-fill','').trim();
+    checkPasswordMatch();
+  });
+
+  // ── Confirm password match indicator ──────────────────────────────
+  function checkPasswordMatch() {
+    var pw      = document.getElementById('signup-password').value;
+    var confirm = document.getElementById('signup-confirm').value;
+    var el      = document.getElementById('confirm-status');
+    if (!confirm) { el.textContent = ''; el.className = 'field-status'; return; }
+    if (pw === confirm) {
+      el.textContent = '✓ Matches';
+      el.className = 'field-status ok';
+    } else {
+      el.textContent = '✗ Does not match';
+      el.className = 'field-status err';
+    }
+  }
+  document.getElementById('signup-confirm').addEventListener('input', checkPasswordMatch);
 
   function showFormError(formId, msg) {
     var el = document.getElementById(formId + '-error');
@@ -238,7 +319,7 @@
         showFormError('signup', data.error || 'Signup failed');
         signupBtn.disabled = false;
         signupBtn.textContent = 'Create Account';
-        loadCaptcha(); // Refresh captcha
+        loadCaptcha(); // Refresh captcha image
       }
     }).catch(function() {
       showFormError('signup', 'Network error. Please try again.');

@@ -779,13 +779,73 @@ tbody td {
   border-radius: 8px;
   padding: 0.75rem 1rem;
   margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
-.captcha-question {
-  font-size: 0.95rem;
-  color: var(--accent);
-  font-weight: 600;
+.captcha-img {
+  display: block;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  image-rendering: pixelated;
+  height: 60px;
 }
+
+.captcha-refresh {
+  flex-shrink: 0;
+}
+
+/* Field status indicators (username, confirm password) */
+.input-validate-wrap {
+  position: relative;
+}
+
+.field-status {
+  display: block;
+  font-size: 0.78rem;
+  margin-top: 0.3rem;
+  min-height: 1.1em;
+  font-weight: 500;
+}
+
+.field-status.ok       { color: var(--success); }
+.field-status.err      { color: var(--danger); }
+.field-status.checking { color: var(--text-muted); }
+
+/* Password strength bar */
+.pw-strength-bar {
+  height: 5px;
+  background: var(--surface2);
+  border-radius: 99px;
+  overflow: hidden;
+  margin-top: 0.4rem;
+  border: 1px solid var(--border);
+}
+
+.pw-strength-fill {
+  height: 100%;
+  width: 0;
+  border-radius: 99px;
+  transition: width 0.3s ease, background 0.3s ease;
+}
+
+.pw-strength-fill.pw-weak   { background: var(--danger); }
+.pw-strength-fill.pw-fair   { background: var(--warning); }
+.pw-strength-fill.pw-good   { background: #7bc67e; }
+.pw-strength-fill.pw-strong { background: var(--success); }
+
+.pw-strength-label {
+  display: block;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  font-weight: 500;
+}
+
+.pw-strength-label.pw-weak   { color: var(--danger); }
+.pw-strength-label.pw-fair   { color: var(--warning); }
+.pw-strength-label.pw-good   { color: #7bc67e; }
+.pw-strength-label.pw-strong { color: var(--success); }
 
 /* =====================================================
    Dashboard
