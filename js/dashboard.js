@@ -7,10 +7,9 @@
 
     let activitiesCatalog = {};   // { name: {unit, factor, category} }
     let currentWeekDays   = {};   // { 'YYYY-MM-DD': dayData|null }
-    let currentWeekKey    = '';
     let pendingActivities = [];   // activities added in the form but not yet saved
     let userGoals         = {};
-    let userProfile       = {}; 
+    let userProfile       = {};
 
     /* ── BMR calculation (Revised Harris-Benedict, 1984) ── */
     function calculateBMR(profile) {
@@ -115,86 +114,17 @@
     }
 
     /* ── Load week data ── */
-    function getDatePart(value) {
-        return value ? value.split('T')[0] : '';
-    }
-
-    function pad(value) {
-        return String(value).padStart(2, '0');
-    }
-
-    function formatDatetimeLocal(value) {
-        const d = new Date(value);
-        if (isNaN(d)) return '';
-        return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
-    }
-
-    function getWeekKeyForDate(value) {
-        const d = new Date(getDatePart(value) || value);
-        if (isNaN(d)) return '';
-        const iso = getIsoWeek(d);
-        return iso.year + '-' + String(iso.week).padStart(2, '0');
-    }
-
-    function updateLogSummary(dateOnly, day) {
-        const summary = document.getElementById('log-summary');
-        if (!summary) return;
-        if (!day) {
-            summary.innerHTML = 'No saved log exists for <strong>' + (dateOnly || 'selected') + '</strong>. Enter values and save to create a log for that day.';
-            return;
-        }
-
-        summary.innerHTML =
-            '<div class="summary-row"><span>Date</span><strong>' + formatDate(dateOnly) + '</strong></div>' +
-            '<div class="summary-row"><span>Steps</span><strong>' + (day.steps || 0).toLocaleString() + '</strong></div>' +
-            '<div class="summary-row"><span>Water</span><strong>' + (day.water || 0) + ' gl</strong></div>' +
-            '<div class="summary-row"><span>Sleep</span><strong>' + (day.sleep || 0) + 'h</strong></div>' +
-            '<div class="summary-row"><span>Clean meals</span><strong>' + (day.meals || 0) + '</strong></div>';
-    }
-
-    function applySelectedDate(value) {
-        const dateOnly = getDatePart(value);
-        const day = currentWeekDays[dateOnly] || null;
-        const water = document.getElementById('log-water');
-        const sleep = document.getElementById('log-sleep');
-        const meals = document.getElementById('log-meals');
-        const steps = document.getElementById('log-steps');
-
-        if (day) {
-            if (water) water.value = day.water || '';
-            if (sleep) sleep.value = day.sleep || '';
-            if (meals) meals.value = day.meals || '';
-            if (steps) steps.value = day.steps || '';
-            pendingActivities = (day.activities || []).slice();
-        } else {
-            if (water) water.value = '';
-            if (sleep) sleep.value = '';
-            if (meals) meals.value = '';
-            if (steps) steps.value = '';
-            pendingActivities = [];
-        }
-
-        renderPendingActivities();
-        updateLogSummary(dateOnly, day);
-    }
-
-    function loadWeekDataForDate(value) {
-        const weekKey = getWeekKeyForDate(value || new Date().toISOString());
-        const isoInfo = getIsoWeek(new Date(getDatePart(value) || new Date()));
+    function loadWeekData() {
+        const isoInfo = getIsoWeek(new Date());
         const weekLabel = document.getElementById('week-label');
         if (weekLabel) {
             weekLabel.innerHTML = 'Week <strong>' + isoInfo.week + '</strong>, ' + isoInfo.year;
         }
-        if (!weekKey) return Promise.resolve();
-        if (weekKey === currentWeekKey && Object.keys(currentWeekDays).length) {
-            return Promise.resolve();
-        }
 
-        return App.fetchJSON('./api/log.php', { action: 'get_week', week: weekKey })
+        return App.fetchJSON('./api/log.php', { action: 'get_week' })
             .then(function (data) {
                 if (data.days) {
                     currentWeekDays = data.days;
-                    currentWeekKey = weekKey;
                     updateProgressBars();
                     renderWeekTable();
                 }
@@ -202,10 +132,6 @@
             .catch(function () {
                 App.showToast('Could not load week data', 'error');
             });
-    }
-
-    function loadWeekData() {
-        return loadWeekDataForDate(new Date().toISOString());
     }
 
     /* ── Progress bars ── */
@@ -349,11 +275,11 @@
 
     /* ── Init dashboard ── */
     function init() {
-        // Set today's date and time as default
+        // Set today's date as default
         const datePicker = document.getElementById('log-date');
         if (datePicker) {
-            datePicker.value = formatDatetimeLocal(new Date().toISOString());
-            datePicker.max   = formatDatetimeLocal(new Date().toISOString());
+            datePicker.value = new Date().toISOString().split('T')[0];
+            datePicker.max   = new Date().toISOString().split('T')[0];
         }
 
         // Load catalog, then week data
@@ -362,9 +288,7 @@
                 userGoals   = data.goals   || {};
                 userProfile = data.profile || {};
                 loadActivitiesCatalog().then(function () {
-                    return loadWeekDataForDate(datePicker ? datePicker.value : new Date().toISOString());
-                }).then(function () {
-                    if (datePicker) applySelectedDate(datePicker.value);
+                    loadWeekData();
                 });
 
                 App.startLogoutTimer();
@@ -465,10 +389,23 @@
         const datePicker2 = document.getElementById('log-date');
         if (datePicker2) {
             datePicker2.addEventListener('change', function () {
-                const selected = this.value;
-                loadWeekDataForDate(selected).then(function () {
-                    applySelectedDate(selected);
-                });
+                const d = this.value;
+                if (currentWeekDays[d]) {
+                    const day = currentWeekDays[d];
+                    document.getElementById('log-water').value  = day.water  || '';
+                    document.getElementById('log-sleep').value  = day.sleep  || '';
+                    document.getElementById('log-meals').value  = day.meals  || '';
+                    document.getElementById('log-steps').value  = day.steps  || '';
+                    pendingActivities = (day.activities || []).slice();
+                    renderPendingActivities();
+                } else {
+                    document.getElementById('log-water').value  = '';
+                    document.getElementById('log-sleep').value  = '';
+                    document.getElementById('log-meals').value  = '';
+                    document.getElementById('log-steps').value  = '';
+                    pendingActivities = [];
+                    renderPendingActivities();
+                }
             });
         }
     }

@@ -47,13 +47,8 @@ $role     = $_SESSION['role'] ?? 'user';
       <div class="card-title"><span class="icon">📝</span> Log Today</div>
 
       <div class="form-group">
-        <label for="log-date">Date / Time</label>
-        <input type="datetime-local" id="log-date" class="form-control">
-        <p class="form-hint">Use the calendar picker to select the day and time for this log.</p>
-      </div>
-
-      <div class="form-group" id="log-summary-container">
-        <div id="log-summary" class="log-summary">Select a date/time to load or save activity data for that day.</div>
+        <label for="log-date">Date</label>
+        <input type="date" id="log-date" class="form-control">
       </div>
 
       <div class="form-row">
