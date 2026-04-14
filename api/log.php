@@ -95,13 +95,14 @@ if ($method === 'POST') {
     switch ($action) {
 
         case 'save_day': {
-            $date = trim($input['date'] ?? '');
-            $parsedDate = DateTime::createFromFormat('Y-m-d', $date);
-            if (!$date || !$parsedDate || $parsedDate->format('Y-m-d') !== $date) {
+            $dateRaw = trim($input['date'] ?? '');
+            $timestamp = strtotime($dateRaw);
+            if (!$dateRaw || $timestamp === false) {
                 http_response_code(400);
-                echo json_encode(['error' => 'Invalid date format. Use YYYY-MM-DD.']);
+                echo json_encode(['error' => 'Invalid date format. Use a valid date or datetime.']);
                 exit;
             }
+            $date = date('Y-m-d', $timestamp);
 
             $dayData = [
                 'water'      => floatval($input['water'] ?? 0),
